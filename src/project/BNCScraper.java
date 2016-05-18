@@ -9,6 +9,7 @@ import java.util.regex.Pattern;
 import toberumono.lexer.BasicDescender;
 import toberumono.lexer.BasicLexer;
 import toberumono.lexer.BasicRule;
+import toberumono.lexer.errors.LexerException;
 import toberumono.lexer.util.DefaultIgnorePatterns;
 import toberumono.structures.sexpressions.BasicConsType;
 import toberumono.structures.sexpressions.ConsCell;
@@ -47,10 +48,18 @@ public class BNCScraper {
 	
 	public static String scrapeBNCText(String text) {
 		text = text.replaceAll("<teiHeader>.*?</teiHeader>", "");
-		ConsCell out = getBNCScraper().lex(text);
 		StringBuilder output = new StringBuilder(text.length() / 3);
+		ConsCell out;
+		try {
+			out = getBNCScraper().lex(text);
+		}
+		catch (LexerException e) {
+			System.err.println("Error Parsing BNC Text");
+			out = (ConsCell) e.getState().getRoot();
+		}
 		for (ConsCell cell : out)
-			output.append((String) cell.getCar()).append("\n");
+			if (cell.getCarType() == sentence)
+				output.append((String) cell.getCar()).append("\n");
 		return output.toString();
 	}
 	
