@@ -22,7 +22,7 @@ import coreNLP.Stemmer;
 
 public abstract class Model {
 	private static final Collection<String> KEPT_RELS =
-			Collections.unmodifiableCollection(new HashSet<>(Arrays.asList("nominal subject", "adverbial modifier", "direct object", "adjectival modifier")));
+			Collections.unmodifiableCollection(new HashSet<>(Arrays.asList("nominal subject", "adverbial modifier", "direct object", "adjectival modifier", "compound modifier", "nominal modifier")));
 	
 	private final boolean requireSynchronized;
 	protected final Map<String, Map<String, Double>> probs;
@@ -82,7 +82,9 @@ public abstract class Model {
 	}
 	
 	protected boolean shouldRecord(TypedDependency td) {
-		return td.gov() != null && td.dep() != null && KEPT_RELS.contains(td.reln().getLongName());
+		return td.reln().getLongName() != null && td.gov().tag() != null && td.dep().tag() != null &&
+				(KEPT_RELS.contains(td.reln().getLongName()) || (td.gov().tag().startsWith("NN") && td.dep().tag().startsWith("NN"))) &&
+				td.gov().tag().length() > 1 && td.dep().tag().length() > 1;
 	}
 	
 	public void stem(TypedDependency td) {
@@ -92,6 +94,11 @@ public abstract class Model {
 	}
 	
 	public void stem(IndexedWord iw) {
+		if (iw.tag().startsWith("NNP")) {
+			iw.setWord("{PROPER NOUN}");
+			iw.setTag("NNP");
+			return;
+		}
 		if (!shouldStem(iw))
 			return;
 		iw.setTag(iw.tag().substring(0, 2));
@@ -100,7 +107,7 @@ public abstract class Model {
 	}
 	
 	protected boolean shouldStem(IndexedWord iw) {
-		return iw.tag().length() > 2 && iw.tag().startsWith("VB"); //If it is a non-base-form verb
+		return iw.tag().length() > 2 && (iw.tag().startsWith("VB") || iw.tag().startsWith("NN")); //If it is a non-base-form verb
 	}
 	
 	public void addBigram(TypedDependency td) {
@@ -134,7 +141,7 @@ public abstract class Model {
 	}
 	
 	protected String generateKey(IndexedWord iw) {
-		return iw.word() + " :: " + iw.tag();
+		return iw.word() + " :: " + iw.tag().substring(0, 2);
 	}
 	
 	public void storeModel(Path root) throws IOException {
