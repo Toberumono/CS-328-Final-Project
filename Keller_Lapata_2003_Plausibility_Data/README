@@ -1,0 +1,114 @@
+From: Diarmuid   S aghdha <do242@cam.ac.uk>
+To: Frank Keller <keller@inf.ed.ac.uk>
+Subject: Re: Plausibility judgements from Keller and Lapata (2003)
+Date: Mon, 8 Feb 2010 16:05:34 +0000
+
+Thanks for this, the differences between the data and the paper had me very confused. I've now realised that I had been reading the data wrong; the means file starts:
+
+1       h         30     0.1097     0.1526     0.0279
+1       l         30    -0.3757     0.4185     0.0764
+1       m         30    -0.1309     0.2820     0.0515
+10      h         30     0.0474     0.1294     0.0236
+10      l         30    -0.0461     0.1777     0.0324
+10      m         30    -0.0039     0.1403     0.0256
+
+i.e. the item indexes are in alphabetic rather than numerical order. I had assumed that the 2nd set of scores in the .means file (indexed as '10') were for the 10th set of items in the .items file, but if I assume the set-ordering in .means and .items is the same, the correlation scores make a lot more sense. I did mention my assumption in a previous email, but I probably didn't make it obvious enough that I was doing the wrong thing!
+
+Thanks again for spending the time to help me out, it's really appreciated.
+
+Diarmuid
+
+On Mon, 8 Feb 2010 14:20:37 +0000
+Frank Keller <keller@inf.ed.ac.uk> wrote:
+
+> >>>>> On 30 January 2010, Diarmuid   S aghdha wrote:
+> 
+> > Dear Frank,
+> > 
+> > Sorry to hassle you again, but I'm having serious problems with the 
+> > adjective-noun data - I can't work out how to match the item list in the 
+> > .items files with the means in the .means files. A1.means contains lines like
+> > 
+> > 1       h         30     0.1097     0.1526     0.0279
+> > 1       l         30    -0.3757     0.4185     0.0764
+> > 1       m         30    -0.1309     0.2820     0.0515
+> > 
+> > and A1.items:
+> > 
+> > accurate        description
+> > accurate        publicity
+> > accurate        use
+> > 
+> > from which I assume that the nouns for a given adjective are presented in 
+> > the order high-low-medium (the h-l-m ordering is consistent through 
+> > A1.means). There's no file that explicitly matches items and frequency 
+> > bands. But the fact that I'm getting very bad correlations for the 
+> > adjective data and good correlations with the other datasets makes me 
+> > think that I'm aligning items and scores wrong.
+> 
+> The order is high-low-medium. Going back to the original BNC counts
+> confirms this (the adjective noun pairs were selected from the BNC).
+>  
+> 63 accurate description
+> 1 accurate publicity
+> 5 accurate use
+> 
+> > Table 2 on page 5 of Keller and Lapata (2003) does give examples for the 
+> > various frequency bands; for example "hungry animal" is high, "hungry 
+> > pleasure" is medium and "hungry application" is low. In A1.items, these 
+> > are presented in the following order:
+> > 
+> > hungry  animal
+> > hungry  pleasure
+> > hungry  application
+> > 
+> > i.e. high-medium-low. On the other hand the items for "naughty" are 
+> > presented high-low-medium. The examples given in Table 2 for "guilty" are 
+> > "verdict" (high), "secret" (medium) and "cat" (low), but in A1.items we have:
+> > 
+> > guilty  verdict
+> > guilty  cat
+> > guilty  feeling
+> > 
+> > i.e high, low and an item that doesn't appear in the table at all.
+> 
+> This is an error in the paper. The BNC frequencies are:
+> 
+> 6 hungry animal
+> 1 hungry pleasure
+> 4 hungry application
+> 
+> > In short, I don't think I have the information that's necessary to use the 
+> > A1 and A2 datasets. I'll be extremely grateful if you can help me with 
+> > this - it may make the difference between my being able to submit to ACL 
+> > or not.
+> 
+> Note that the order for the verb and noun files is high-medium-low.
+> I'm including the BNC counts for the seen ones.
+> 
+> Frank
+> 
+> 
+> -- 
+> The University of Edinburgh is a charitable body, registered in
+> Scotland, with registration number SC005336.
+> 
+> 
+
+
+- -- 
+Diarmuid   S aghdha  <do242@cam.ac.uk>
+Research Associate
+Natural Language and Information Processing Group
+Computer Laboratory
+University of Cambridge
+
+The University of Edinburgh is a charitable body, registered in
+Scotland, with registration number SC005336.
+
+
+------- end -------
+
+-- 
+The University of Edinburgh is a charitable body, registered in
+Scotland, with registration number SC005336.

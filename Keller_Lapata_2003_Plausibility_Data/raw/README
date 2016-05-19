@@ -1,0 +1,44 @@
+######################################################################
+# raw data files
+
+# these are the unprocessed data obtained from the experimental
+# subjects:
+
+all_adj_seen	 seen adjective-noun pairs
+all_adj_unseen	 unseen adjective-noun pairs
+all_comp	 seen and unseen noun-noun pairs
+all_sent	 seen and unseen verb-noun pairs
+
+
+# the coding of the files is as follows:
+
+column  1: file name and subject ID
+column  2: lexicalization
+column  3: age of subject
+column  4: sex of subject (1: male, 2: female)
+column  5: handedness of subject (1: right, 2: left)
+column  6: position of presentation
+column  7: stimulus code
+column  8: reference judment
+column  9: time to first key press
+column 10: time to last key press (enter)
+column 11: judgment
+
+
+# the coding of the items is as follows: XX.NN.B
+
+# XX is the item ID:
+A1:  seen adjective-noun pairs
+A2:  unseen adjective-noun pairs
+N1:  seen noun-noun pairs
+N2:  unseen noun-noun pairs
+V1:  seen verb-noun pairs
+V2:  unseen verb-noun pairs
+
+# NN is the item number (0-30)
+
+# B is the frequency band:
+l or 1: low
+m or 2: medium
+h or 3: high
+f:      filler (item not used)

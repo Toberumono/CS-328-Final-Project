@@ -1,0 +1,33 @@
+######################################################################
+# mean data files
+
+# these are the processed data files; they were obtained from the raw
+# data files by:
+#
+# (a) dividing each judgment by the corresponding reference judgment
+# (b) log-transforming the resulting judgments (base 10)
+# (c) computing the by-item means of the resulting judgments
+
+# the files are:
+
+A1.means  seen adjective-noun pairs
+A2.means  unseen adjective-noun pairs
+N1.means  seen noun-noun pairs
+N2.means  unseen noun-noun pairs
+V1.means  seen verb-noun pairs
+V2.means  unseen verb-noun pairs
+
+# the coding of the files is as follows:
+
+column  1: subject ID
+column  2: frequency band
+column  3: number of subjects
+column  4: mean
+column  5: standard deviation
+column  6: standard error
+
+# the frequency band is coded as:
+
+l or 1: low
+m or 2: medium
+h or 3: high

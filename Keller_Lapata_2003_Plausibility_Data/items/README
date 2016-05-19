@@ -1,0 +1,11 @@
+######################################################################
+# item files
+
+# these the items used in the experiments
+
+A1.items	seen adjective-noun pairs
+A2.items	unseen adjective-noun pairs
+N1.items	seen noun-noun pairs
+N2.items	unseen noun-noun pairs
+V1.items	seen verb-noun pairs
+V2.items	unseen verb-noun pairs
