@@ -3,6 +3,7 @@ package project;
 import java.io.BufferedWriter;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.net.URL;
 import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -13,16 +14,38 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
+import coreNLP.Stemmer;
+import edu.mit.jwi.Dictionary;
+import edu.mit.jwi.IDictionary;
+import edu.mit.jwi.morph.WordnetStemmer;
 import edu.stanford.nlp.ling.IndexedWord;
 import edu.stanford.nlp.trees.TypedDependency;
-import coreNLP.Stemmer;
 
 public abstract class Model {
 	private static final Collection<String> KEPT_RELS =
 			Collections.unmodifiableCollection(new HashSet<>(Arrays.asList("nominal subject", "adverbial modifier", "direct object", "adjectival modifier", "compound modifier", "nominal modifier")));
+	private static final WordnetStemmer stemmer;
+	static {
+		WordnetStemmer wns = null;
+		try {
+			URL url = new URL("file", null, System.getProperty("wordnet.database.dir"));
+			IDictionary dict = new Dictionary(url);
+			dict.open();
+			wns = new WordnetStemmer(dict);
+		}
+		catch (IOException e) {
+			e.printStackTrace();
+		}
+		stemmer = wns;
+		Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+			if (stemmer != null)
+				stemmer.getDictionary().close();
+		}));
+	}
 	
 	private final boolean requireSynchronized;
 	protected final Map<String, Map<String, Double>> probs;
@@ -101,8 +124,9 @@ public abstract class Model {
 		}
 		if (!shouldStem(iw))
 			return;
-		iw.setTag(iw.tag().substring(0, 2));
-		iw.setWord(new Stemmer().stem(iw.word()));
+		iw.setTag(iw.tag().substring(0, iw.tag().length() - 1));
+		List<String> stems = stemmer.findStems(iw.word(), JWIIntegration.posAdapter(iw.tag()));
+		iw.setWord(stems.size() > 0 ? stems.get(0) : new Stemmer().stem(iw.word()));
 		return;
 	}
 	
