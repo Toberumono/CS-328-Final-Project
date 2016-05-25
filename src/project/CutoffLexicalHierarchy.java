@@ -6,9 +6,6 @@ import java.nio.file.Path;
 import edu.stanford.nlp.trees.TypedDependency;
 
 public class CutoffLexicalHierarchy extends Model {
-	public DigestWornet(Path file) {
-		
-	}
 
 	public CutoffLexicalHierarchy(boolean requireSynchronized) {
 		super(requireSynchronized);
