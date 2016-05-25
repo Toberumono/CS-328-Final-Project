@@ -26,7 +26,7 @@ import edu.stanford.nlp.ling.IndexedWord;
 import edu.stanford.nlp.trees.TypedDependency;
 
 public abstract class Model {
-	private static final Collection<String> KEPT_RELS =
+	protected static final Collection<String> KEPT_RELS =
 			Collections.unmodifiableCollection(new HashSet<>(Arrays.asList("nominal subject", "adverbial modifier", "direct object", "adjectival modifier", "compound modifier", "nominal modifier")));
 	private static final WordnetStemmer stemmer;
 	static {
@@ -66,11 +66,20 @@ public abstract class Model {
 			public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
 				System.out.println(file);
 				String name = file.getFileName().toString();
-				probs.put(name, new HashMap<>());
-				Files.lines(file).forEach(line -> {
-					int equals = line.indexOf('=');
-					probs.get(name).put(line.substring(0, equals).trim(), Double.parseDouble(line.substring(0, equals + 1).trim()));
-				});
+				if (name.equals("STORED_COUNTS")) {
+					initCounts();
+					Files.lines(file).forEach(line -> {
+						int equals = line.indexOf('=');
+						counts.put(line.substring(0, equals).trim(), Integer.parseInt(line.substring(equals + 1).trim()));
+					});
+				}
+				else {
+					probs.put(name, new HashMap<>());
+					Files.lines(file).forEach(line -> {
+						int equals = line.indexOf('=');
+						probs.get(name).put(line.substring(0, equals).trim(), Double.parseDouble(line.substring(equals + 1).trim()));
+					});
+				}
 				return FileVisitResult.CONTINUE;
 			}
 		};
@@ -164,6 +173,17 @@ public abstract class Model {
 		}
 	}
 	
+	public abstract Double probabilityForBigram(TypedDependency td);
+	
+	public Integer countForBigram(TypedDependency td) {
+		stem(td);
+		String name = td.reln().getLongName();
+		if (!probs.containsKey(name))
+			return 0;
+		String gov = generateKey(td.gov()), dep = generateKey(td.dep()), key = gov + " ~ " + dep;
+		return probs.get(name).containsKey(key) ? (int) (converted ? probs.get(name).get(key) * counts.get(name) : probs.get(name).get(key)) : 0;
+	}
+	
 	protected String generateKey(IndexedWord iw) {
 		return iw.word() + " :: " + iw.tag().substring(0, 2);
 	}
@@ -186,6 +206,20 @@ public abstract class Model {
 					}
 				});
 			}
+		}
+		Path active = root.resolve("STORED_COUNTS");
+		Files.deleteIfExists(active);
+		Files.createFile(active);
+		try (FileWriter fw = new FileWriter(active.toFile()); BufferedWriter bw = new BufferedWriter(fw)) {
+			counts.entrySet().stream().map(e -> e.getKey() + " = " + e.getValue()).forEach(s -> {
+				try {
+					bw.write(s);
+					bw.newLine();
+				}
+				catch (IOException e) {
+					e.printStackTrace();
+				}
+			});
 		}
 	}
 }
