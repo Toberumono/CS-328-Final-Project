@@ -69,14 +69,14 @@ public abstract class Model {
 				if (name.equals("STORED_COUNTS")) {
 					initCounts();
 					Files.lines(file).forEach(line -> {
-						int equals = line.indexOf('=');
+						int equals = line.lastIndexOf('=');
 						counts.put(line.substring(0, equals).trim(), Integer.parseInt(line.substring(equals + 1).trim()));
 					});
 				}
 				else {
 					probs.put(name, new HashMap<>());
 					Files.lines(file).forEach(line -> {
-						int equals = line.indexOf('=');
+						int equals = line.lastIndexOf('=');
 						probs.get(name).put(line.substring(0, equals).trim(), Double.parseDouble(line.substring(equals + 1).trim()));
 					});
 				}
