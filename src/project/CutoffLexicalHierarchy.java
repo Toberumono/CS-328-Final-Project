@@ -24,7 +24,7 @@ public class CutoffLexicalHierarchy extends Model {
 	public Double probabilityForBigram(TypedDependency td) {
 		stem(td);
 		String name = td.reln().getLongName(), gov = generateKey(td.gov()), dep = generateKey(td.dep()), key = gov + " ~ " + dep;
-		return probs.get(td.reln().getLongName()).get(key);
+		return probs.get(name).get(key);
 	}
 	
 	

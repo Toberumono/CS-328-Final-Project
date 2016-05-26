@@ -5,6 +5,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.regex.Pattern;
+import java.util.stream.Stream;
 
 import toberumono.lexer.BasicDescender;
 import toberumono.lexer.BasicLexer;
@@ -23,17 +24,18 @@ public class BNCScraper {
 	public static synchronized final BasicLexer getBNCScraper() {
 		if (lexer == null) {
 			lexer = new BasicLexer(DefaultIgnorePatterns.WHITESPACE);
-			lexer.addDescender("Sentence", new BasicDescender(Pattern.compile("<s.*?>"), Pattern.compile("</s>", Pattern.LITERAL), (l, s, m) -> {
+			lexer.addDescender("Sentence", new BasicDescender(Pattern.compile("<s( .*?)?\\>"), Pattern.compile("</s>", Pattern.LITERAL), (l, s, m) -> {
 				String sen = "";
-				for (ConsCell word : m)
-					sen += (String) word.getCar();
+				if (m != null)
+					for (ConsCell word : m)
+						sen += (String) word.getCar();
 				return new ConsCell(sen, sentence);
 			}));
-			lexer.addRule("Word", new BasicRule(Pattern.compile("<w.*?>(.*?)</w>"), (l, s, m) -> new ConsCell(m.group(1), text)));
-			lexer.addRule("Punc", new BasicRule(Pattern.compile("<c.*?>(.*?)</c>"), (l, s, m) -> {
-				if (m.group(1).equals("\u2026"))
+			lexer.addRule("Word", new BasicRule(Pattern.compile("<w( .*?)?\\>(.*?)</w>"), (l, s, m) -> new ConsCell(m.group(2), text)));
+			lexer.addRule("Punc", new BasicRule(Pattern.compile("<c( .*?)?\\>(.*?)</c>"), (l, s, m) -> {
+				if (m.group(2).equals("\u2026"))
 					return new ConsCell(", ", text);
-				return new ConsCell(m.group(1), text);
+				return new ConsCell(m.group(2), text);
 			}));
 			lexer.addIgnore("Other Stuff", Pattern.compile("<([^wsc/][^>]*?|[^>]{2,}?|/[^wsc][^>]*?|/[^>]{2,}?)>"));
 		}
@@ -42,7 +44,9 @@ public class BNCScraper {
 	
 	public static String scrapeBNCFile(Path file) throws IOException {
 		final StringBuilder sb = new StringBuilder();
-		Files.lines(file).forEach(l -> sb.append(l).append("\n"));
+		try (Stream<String> lines = Files.lines(file)) {
+			lines.forEach(l -> sb.append(l).append("\n"));
+		}
 		return scrapeBNCText(sb.toString());
 	}
 	
@@ -57,6 +61,8 @@ public class BNCScraper {
 			System.err.println("Error Parsing BNC Text");
 			out = (ConsCell) e.getState().getRoot();
 		}
+		if (out == null)
+			return "";
 		for (ConsCell cell : out)
 			if (cell.getCarType() == sentence)
 				output.append((String) cell.getCar()).append("\n");
