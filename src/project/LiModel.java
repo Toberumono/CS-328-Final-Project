@@ -9,6 +9,8 @@ import java.util.stream.Collectors;
 
 import toberumono.structures.tuples.Triple;
 
+import edu.stanford.nlp.trees.TypedDependency;
+
 public class LiModel extends Model {
 	//Pattern keyExtractor = Pattern.compile("(\\w+) :: (\\w+) ~ (\\w+) :: (\\w+)");
 	
@@ -49,6 +51,12 @@ public class LiModel extends Model {
 	protected void smooth() {
 		// TODO Auto-generated method stub
 		
+	}
+
+	@Override
+	public Double probabilityForBigram(TypedDependency td) {
+		// TODO Auto-generated method stub
+		return null;
 	}
 	
 	

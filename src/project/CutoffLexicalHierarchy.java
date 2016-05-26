@@ -27,4 +27,5 @@ public class CutoffLexicalHierarchy extends Model {
 		return probs.get(td.reln().getLongName()).get(key);
 	}
 	
+	
 }
