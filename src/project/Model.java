@@ -173,6 +173,20 @@ public abstract class Model {
 		}
 	}
 	
+	public Double getHighestProbabilityForBigram(String first, String firstPos, String second, String secondPos) {
+		convertToProbs();
+		double highest = 0.0;
+		String key = generateKey(first, firstPos) + " ~ " + generateKey(second, secondPos);
+		for (String mapping : counts.keySet())
+			if (probs.get(mapping).containsKey(key) && probs.get(mapping).get(key) > highest)
+				highest = probs.get(mapping).get(key);
+		key = generateKey(second, secondPos) + " ~ " + generateKey(first, firstPos);
+		for (String mapping : counts.keySet())
+			if (probs.get(mapping).containsKey(key) && probs.get(mapping).get(key) > highest)
+				highest = probs.get(mapping).get(key);
+		return highest;
+	}
+	
 	public abstract Double probabilityForBigram(TypedDependency td);
 	
 	public Integer countForBigram(TypedDependency td) {
@@ -184,8 +198,12 @@ public abstract class Model {
 		return probs.get(name).containsKey(key) ? (int) (converted ? probs.get(name).get(key) * counts.get(name) : probs.get(name).get(key)) : 0;
 	}
 	
-	protected String generateKey(IndexedWord iw) {
-		return iw.word() + " :: " + iw.tag().substring(0, 2);
+	public String generateKey(IndexedWord iw) {
+		return generateKey(iw.word(), iw.tag());
+	}
+	
+	public String generateKey(String word, String tag) {
+		return word.toLowerCase() + " :: " + tag.substring(0, 2);
 	}
 	
 	public void storeModel(Path root) throws IOException {
