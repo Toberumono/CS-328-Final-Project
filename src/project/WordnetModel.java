@@ -12,6 +12,7 @@ import edu.smu.tspell.wordnet.Synset;
 import edu.smu.tspell.wordnet.SynsetType;
 import edu.smu.tspell.wordnet.WordNetDatabase;
 import edu.stanford.nlp.trees.TypedDependency;
+import sun.misc.Queue;
 
 public class WordnetModel extends Model {
 	private static WordNetDatabase wordnetDB = WordNetDatabase.getFileInstance();
@@ -50,7 +51,7 @@ public class WordnetModel extends Model {
 	// For right now this is only for verbs, will generalize later
 	public List<Pair<Pair<Synset,Synset>,Double>> getGeneralization(String mapping, String vb) {
 		convertToProbs();
-		List<Pair<Synset,Double>> out = new ArrayList<>();
+		List<Triple<Synset,Double>> out = new ArrayList<>();
 		List<Pair<String,Double>> usedIDs = new ArrayList<>();
 		double sum = 0;
 		String gov = generateKey(vb, "VB");
@@ -66,14 +67,16 @@ public class WordnetModel extends Model {
 			Synset[] synsets = wordnetDB.getSynsets(ID.getX().substring(0, ID.getX().indexOf(" :: ")));
 			for (Synset s : synsets) {
 				Synset[] hypernyms = ((NounSynset)s).getHypernyms();
-				for(NounSynset p : hypernyms) {
-					out.add(new Pair<>(new Pair<>(p, s),prob/synsets.length));
+				for(Synset p : hypernyms) {
+					int 
+					out.add(new Triple<>(new Pair<>(p, s),prob/synsets.length,));
 				}
 			}
 		}
+	}
 		
 		
-		
+		/*
 		for (String mapping : counts.keySet()) {
 			
 		}
@@ -94,7 +97,7 @@ public class WordnetModel extends Model {
 			}).collect(Collectors.toList());
 			Map<String, Double> pairs = probs.get(mapping);
 			int totalCount = counts.get(mapping);
-			*/
+			
 			
 			int[][] counts = new int[govSet.size()][depSet.size()];
 			String key;
@@ -107,8 +110,21 @@ public class WordnetModel extends Model {
 			out.put(mapping, new Triple<>(govSet, depSet, counts)); //x, y, z
 		}
 		return out;
-	}
+	}*/
 
+	public boolean isChildNoun(String noun,NounSynset root) {
+		Queue<NounSynset> squeue = new Queue<>();
+		squeue.enqueue(root));
+		while(!squeue.isEmpty()) {
+			NounSynset temp = squeue.dequeue();
+			if (temp.getWordForms().toString().contains(noun)) {
+				return true;
+			} else {
+				for (NounSynset s : temp.getHyponyms()) {squeue.enqueue(s);}
+			}
+		}
+		return false;
+	}
 	
 	@Override
 	protected void smooth() {
