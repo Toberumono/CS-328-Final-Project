@@ -141,24 +141,4 @@ public class ModelEvaluator {
 		}
 		return out;
 	}
-	
-	public List<Pair<int[], Double>> computeLdat(int[][] counts, int I, int V) {
-		int[] sums = new int[counts.length]; //f(C_x)
-		for (int i = 0; i < I; i++)
-			for (int v = 0; v < V; v++)
-				sums[i] += counts[i][v];
-		List<Pair<int[], Double>> ldat = new SortedList<>((a, b) -> a.getY().compareTo(b.getY())); //int[] = {i, j}
-		for (int i = 0; i < I; i++) {
-			for (int j = i + 1; j < I; j++) {
-				double sum = 0;
-				for (int v = 0; v < V; v++) {
-					sum += counts[i][v] * Math.log(((double) counts[i][v]) / sums[i]);
-					sum += counts[j][v] * Math.log(((double) counts[j][v]) / sums[j]);
-					sum += (counts[i][v] + counts[j][v]) * Math.log((((double) counts[i][v]) + ((double) counts[j][v])) / (sums[i] + sums[j]));
-				}
-				ldat.add(new Pair<>(new int[]{i, j}, sum));
-			}
-		}
-		return ldat;
-	}
 }
