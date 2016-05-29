@@ -98,7 +98,6 @@ public abstract class Model {
 				for (Entry<String, Double> e : bigramType.getValue().entrySet())
 					e.setValue(e.getValue() / count);
 			}
-			smooth();
 		}
 	}
 	
@@ -187,7 +186,15 @@ public abstract class Model {
 		return highest;
 	}
 	
-	public abstract Double probabilityForBigram(TypedDependency td);
+	public Double probabilityForBigram(TypedDependency td) {
+		convertToProbs();
+		stem(td);
+		String name = td.reln().getLongName();
+		if (!probs.containsKey(name))
+			return 0.0;
+		String gov = generateKey(td.gov()), dep = generateKey(td.dep()), key = gov + " ~ " + dep;
+		return probs.get(name).get(key);
+	}
 	
 	public Integer countForBigram(TypedDependency td) {
 		stem(td);
@@ -208,6 +215,7 @@ public abstract class Model {
 	
 	public void storeModel(Path root) throws IOException {
 		convertToProbs();
+		smooth();
 		Files.createDirectories(root);
 		for (Entry<String, Map<String, Double>> entry : probs.entrySet()) {
 			Path active = root.resolve(entry.getKey());

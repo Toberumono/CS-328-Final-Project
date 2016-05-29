@@ -24,18 +24,24 @@ public class BNCScraper {
 	public static synchronized final BasicLexer getBNCScraper() {
 		if (lexer == null) {
 			lexer = new BasicLexer(DefaultIgnorePatterns.WHITESPACE);
-			lexer.addDescender("Sentence", new BasicDescender(Pattern.compile("<s( .*?)?\\>"), Pattern.compile("</s>", Pattern.LITERAL), (l, s, m) -> {
+			lexer.addDescender("Sentence", new BasicDescender(Pattern.compile("<s( .*?)?((?<!/)>)"), Pattern.compile("</s>", Pattern.LITERAL), (l, s, m) -> {
 				String sen = "";
 				if (m != null)
 					for (ConsCell word : m)
 						sen += (String) word.getCar();
 				return new ConsCell(sen, sentence);
 			}));
-			lexer.addRule("Word", new BasicRule(Pattern.compile("<w( .*?)?\\>(.*?)</w>"), (l, s, m) -> new ConsCell(m.group(2), text)));
-			lexer.addRule("Punc", new BasicRule(Pattern.compile("<c( .*?)?\\>(.*?)</c>"), (l, s, m) -> {
-				if (m.group(2).equals("\u2026"))
+			lexer.addRule("Word", new BasicRule(Pattern.compile("<w( [^>]*?)?((?<!/)>)(.+?)</w>"), (l, s, m) -> {
+				if (m.group(3).contains(">")) {
+					System.out.println(m.group());
+					return new ConsCell();
+				}
+				return new ConsCell(m.group(3), text);
+			}));
+			lexer.addRule("Punc", new BasicRule(Pattern.compile("<c( .*?)?((?<!/)>)(.+?)</c>"), (l, s, m) -> {
+				if (m.group(3).equals("\u2026"))
 					return new ConsCell(", ", text);
-				return new ConsCell(m.group(2), text);
+				return new ConsCell(m.group(3), text);
 			}));
 			lexer.addIgnore("Other Stuff", Pattern.compile("<([^wsc/][^>]*?|[^>]{2,}?|/[^wsc][^>]*?|/[^>]{2,}?)>"));
 		}
