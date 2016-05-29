@@ -1,5 +1,7 @@
 package project;
 
+import java.io.IOException;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -68,7 +70,7 @@ public class WordnetModel extends Model {
 			Synset[] test = database.getSynsets("canine", SynsetType.NOUN);
 			System.err.println("Roots");
 			
-			WordnetModel m = new WordnetModel();
+			WordnetModel m = new WordnetModel(false);
 			//m.initilzieWordnet();
 			
 		} catch (Exception e) {
@@ -109,6 +111,24 @@ public class WordnetModel extends Model {
 				}
 			}	
 		}
+		System.err.println("Num Synsets: " + NounTreeMap.size());
+		int[] treeinfo = initilizeSubtreesRecursive(wordnetNounTree);
+		System.err.println("Finished adding subtree data to nodes");
+		System.err.println("There are " + treeinfo[0] + " nodes in the tree with " + treeinfo[1] + " words total");
+	}
+	
+	private int[] initilizeSubtreesRecursive(Node root) {
+		int[] out = new int[2];
+		out[0] = root.numNodes;
+		out[1] = root.numNouns;
+		for (Node c : root.children) {
+			int[] tmp = initilizeSubtreesRecursive(c);
+			out[0] += tmp[0];
+			out[1] += tmp[1];
+		}
+		root.numNodes = out[0];
+		root.numNouns = out[1];
+		return out;
 	}
 	
 	
@@ -119,6 +139,7 @@ public class WordnetModel extends Model {
 		convertToProbs();
 		// List<Triple<Synset,Double>> out = new ArrayList<>();
 		// TODO add code here that resets probs to zero. 
+		resetProbablities();
 		
 		// Counting all the instances of nouns in the tree
 		List<Pair<String,Double>> usedIDs = new ArrayList<>();
@@ -168,6 +189,21 @@ public class WordnetModel extends Model {
 	}
 		
 		
+	private void resetProbablities() throws InterruptedException {
+		Queue<Node> squeue = new Queue<>();
+		squeue.enqueue(wordnetNounTree);
+		while(!squeue.isEmpty()) {
+			Node temp = squeue.dequeue();
+			temp.probability = 0;
+			for (Node s : temp.children) {squeue.enqueue(s);}
+		}
+		
+	}
+
+
+
+
+
 		/*
 		for (String mapping : counts.keySet()) {
 			
@@ -217,6 +253,10 @@ public class WordnetModel extends Model {
 				c.addAll(findMDL(ci));
 			}
 			if (ldash(root) < ldash(c)) {
+				// Assigning the probabilit of the subpartition.
+				for  (Node ci : c) {
+					start.probability += ci.probability;
+				}
 				return root;
 			} else {
 				return c;
@@ -227,7 +267,7 @@ public class WordnetModel extends Model {
 
 
 
-
+	// TODO stub method, figure out the math
 	private double ldash(Set<Node> root) {
 			//double t1 = ((root.size()+1)/ 2.0)*log(2, <NUMCOUNTS>);
 			//double t2 = 
@@ -282,9 +322,14 @@ public class WordnetModel extends Model {
 		return out;
 		
 	}
-	*/
+	*/	
+	public WordnetModel(boolean requireSynchronized) throws InterruptedException {
+		super(requireSynchronized);
+		this.initilzieWordnet();
+	}
 	
-	public WordnetModel() {
+	public WordnetModel(Path root, boolean requireSynchronized) throws IOException, InterruptedException {
+		super(root, requireSynchronized);
 		this.initilzieWordnet();
 	}
 	
@@ -308,15 +353,21 @@ class Node {
 	Synset synset;
 	Node[] children;
 	double probability;
+	int numNouns;
+	int numNodes;
 	
 	public Node(Synset root) {
 		this.synset = root;
 		this.parent = null;
+		this.numNodes = 1;
+		this.numNouns = synset.getWordForms().length;
 	}
 	
 	public Node(Node parent, Synset set) {
 		this.synset = set;
 		this.parent = parent;
+		this.numNodes = 1;
+		this.numNouns = synset.getWordForms().length;
 	}
 }
 
