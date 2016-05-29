@@ -61,6 +61,7 @@ public abstract class Model {
 	
 	public Model(Path root, boolean requireSynchronized) throws IOException {
 		this(requireSynchronized);
+		converted = true;
 		SimpleFileVisitor<Path> visitor = new SimpleFileVisitor<Path>() {
 			@Override
 			public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
@@ -92,12 +93,12 @@ public abstract class Model {
 		synchronized (probs) {
 			if (converted) //Have to re-check here
 				return;
-			converted = true;
 			for (Entry<String, Map<String, Double>> bigramType : probs.entrySet()) {
 				double count = counts.get(bigramType.getKey().indexOf('_') > -1 ? bigramType.getKey().substring(0, bigramType.getKey().indexOf('_')) : bigramType.getKey());
 				for (Entry<String, Double> e : bigramType.getValue().entrySet())
 					e.setValue(e.getValue() / count);
 			}
+			converted = true;
 		}
 	}
 	
