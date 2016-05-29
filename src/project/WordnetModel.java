@@ -1,8 +1,13 @@
 package project;
 
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Set;
 
 import toberumono.structures.tuples.Pair;
 import toberumono.structures.tuples.Triple;
@@ -15,43 +20,107 @@ import edu.stanford.nlp.trees.TypedDependency;
 import sun.misc.Queue;
 
 public class WordnetModel extends Model {
+	private static final NounSynset[] A = null;
 	private static WordNetDatabase wordnetDB = WordNetDatabase.getFileInstance();
+	private static Map<String, List<Node>> NounTreeMap;
+	private static Node wordnetNounTree;
 	
 	public static void main(String[] args) {
-		NounSynset nounSynset; 
-		NounSynset[] hyponyms; 
-		NounSynset[] hypernyms; 
+		try {
+			NounSynset nounSynset; 
+			NounSynset[] hyponyms; 
+			NounSynset[] hypernyms; 
 
-		WordNetDatabase database = WordNetDatabase.getFileInstance(); 
-		Synset[] synsets = database.getSynsets("cat", SynsetType.NOUN); 
-		for (int i = 0; i < synsets.length; i++) { 
-		    nounSynset = (NounSynset)(synsets[i]); 
-		    hyponyms = nounSynset.getHyponyms(); 
-		    hypernyms = nounSynset.getHypernyms();
-		    String[] syns = nounSynset.getWordForms();
-		    for(String s : syns) {
-		    	System.err.println("      " + s);
-		    }
-		    
-		    
-		    
-		    System.err.println(nounSynset.getWordForms().toString() + 
-		            ": " + nounSynset.getDefinition() + ") has " + hyponyms.length + " hyponyms"); 
-		    for (int j = 0; j<hyponyms.length;j++) {
-		    	System.err.println(hyponyms[j].getWordForms()[0]);
-		    }
-		    System.err.println(nounSynset.getWordForms()[0] + 
-		            ": " + nounSynset.getDefinition() + ") has " + hypernyms.length + " hypernyms"); 
-		    for (int j = 0; j<hypernyms.length;j++) {
-		    	System.err.println(hypernyms[j].getWordForms()[0]);
-		    }
+			WordNetDatabase database = WordNetDatabase.getFileInstance(); 
+			Synset[] synsets = database.getSynsets("airplane", SynsetType.NOUN); 
+			for (int i = 0; i < synsets.length; i++) { 
+			    nounSynset = (NounSynset)(synsets[i]); 
+			    hyponyms = nounSynset.getHyponyms(); 
+			    hypernyms = nounSynset.getHypernyms();
+			    String[] syns = nounSynset.getWordForms();
+			    for(String s : syns) {
+			    	System.err.println("      " + s);
+			    }
+			    
+			    
+			    
+			    System.err.println(nounSynset.getWordForms().toString() + 
+			            ": " + nounSynset.getDefinition() + ") has " + hyponyms.length + " hyponyms"); 
+			    for (int j = 0; j<hyponyms.length;j++) {
+			    	System.err.println(hyponyms[j].getWordForms()[0]);
+			    }
+			    System.err.println(nounSynset.getWordForms()[0] + 
+			            ": " + nounSynset.getDefinition() + ") has " + hypernyms.length + " hypernyms"); 
+			    for (int j = 0; j<hypernyms.length;j++) {
+			    	System.err.println(hypernyms[j].getWordForms()[0]);
+			    }
+			}
+			System.err.println("Making a test for the thing\n\n");
+			Synset[] A = database.getSynsets("dog", SynsetType.NOUN);
+			Synset[] B = database.getSynsets("dog", SynsetType.NOUN);
+			if (A[0].equals(B[0])) {
+				System.err.println("Synsets are equal");
+			} else {
+				System.err.println("Synsets are not equal");
+			}
+			NounSynset[] s = ((NounSynset)A[0]).getHypernyms();
+			for (NounSynset a : s) {System.err.println(a.getWordForms()[0] + a.getWordForms()[1]);}
+			Synset[] test = database.getSynsets("canine", SynsetType.NOUN);
+			System.err.println("Roots");
+			
+			WordnetModel m = new WordnetModel();
+			//m.initilzieWordnet();
+			
+		} catch (Exception e) {
+			System.err.println("Error");
+			e.printStackTrace();
 		}
 	}
 	
+	
+	
+	
+	
+	public void initilzieWordnet() throws InterruptedException {
+		wordnetNounTree = new Node(wordnetDB.getSynsets("entity", SynsetType.NOUN)[0]);
+		NounTreeMap = new HashMap<>();
+		List<Node> root = new LinkedList<Node>();
+		root.add(wordnetNounTree);
+		NounTreeMap.put(wordnetNounTree.synset.getDefinition(), root);
+		Queue<Node> nqueue = new Queue<>();
+		nqueue.enqueue(wordnetNounTree);
+		
+		
+		while(!nqueue.isEmpty()) {
+			Node current = nqueue.dequeue();
+			NounSynset[] children = ((NounSynset)current.synset).getHyponyms();
+			current.children = new Node[children.length];
+			for (int i = 0; i < current.children.length; i++) {
+				current.children[i] = new Node(current, children[i]);
+				nqueue.enqueue(current.children[i]);
+				
+				String tmp = children[i].getDefinition();
+				if (NounTreeMap.containsKey(tmp)) {
+					NounTreeMap.get(tmp).add(current.children[i]);
+				} else {
+					List<Node> newList = new LinkedList<Node>();
+					newList.add(current.children[i]);
+					NounTreeMap.put(tmp,newList);
+				}
+			}	
+		}
+	}
+	
+	
+		
+	
 	// For right now this is only for verbs, will generalize later
-	public List<Pair<Pair<Synset,Synset>,Double>> getGeneralization(String mapping, String vb) {
+	public double getGeneralization(String mapping, String nn, String vb) {
 		convertToProbs();
-		List<Triple<Synset,Double>> out = new ArrayList<>();
+		// List<Triple<Synset,Double>> out = new ArrayList<>();
+		// TODO add code here that resets probs to zero. 
+		
+		// Counting all the instances of nouns in the tree
 		List<Pair<String,Double>> usedIDs = new ArrayList<>();
 		double sum = 0;
 		String gov = generateKey(vb, "VB");
@@ -62,17 +131,40 @@ public class WordnetModel extends Model {
 			}
 		}
 		
+		// Mapping those counts to the tree
+		Set<Node> visited = new HashSet<>();
 		for (Pair<String,Double> ID : usedIDs) {
 			Double prob = ID.getY()/sum;
-			Synset[] synsets = wordnetDB.getSynsets(ID.getX().substring(0, ID.getX().indexOf(" :: ")));
+			Synset[] synsets = wordnetDB.getSynsets(ID.getX().substring(0, ID.getX().indexOf(" :: ")), SynsetType.NOUN);
+			int totalinstances = 0;
 			for (Synset s : synsets) {
-				Synset[] hypernyms = ((NounSynset)s).getHypernyms();
-				for(Synset p : hypernyms) {
-					int 
-					out.add(new Triple<>(new Pair<>(p, s),prob/synsets.length,));
+				totalinstances = totalinstances + NounTreeMap.get(s.getDefinition()).size();
+			}
+			for (Synset s : synsets) {
+				for (Node n : NounTreeMap.get(s.getDefinition())) {
+					n.probability = n.probability + (ID.getY()/totalinstances);
+					visited.add(n);
+				}
+			}
+		
+		}
+		
+		// Collapsing probabilites into parents
+		for (Node n : visited) {
+			Node current = n; 
+			while (current.parent!=null) {
+				if (current.parent.probability != 0) {
+					current.parent.probability += n.probability;
+					n.probability = 0;
+					break;
+				} else {
+					current = current.parent;
 				}
 			}
 		}
+		
+		Set<Node> cuts = findMDL(wordnetNounTree);
+		return 0.0;
 	}
 		
 		
@@ -112,9 +204,44 @@ public class WordnetModel extends Model {
 		return out;
 	}*/
 
-	public boolean isChildNoun(String noun,NounSynset root) {
+	private Set<Node> findMDL(Node start) {
+		if (start.children.length == 0) {
+			Set<Node> out = new HashSet<>();
+			out.add(start);
+			return out;
+		} else {
+			Set<Node> root = new HashSet<>();
+			root.add(start);
+			Set<Node> c = new HashSet<>();
+			for (Node ci : start.children) {
+				c.addAll(findMDL(ci));
+			}
+			if (ldash(root) < ldash(c)) {
+				return root;
+			} else {
+				return c;
+			}
+		}
+	}
+
+
+
+
+
+	private double ldash(Set<Node> root) {
+			//double t1 = ((root.size()+1)/ 2.0)*log(2, <NUMCOUNTS>);
+			//double t2 = 
+			//return t1+t2;
+		return 0;
+	}
+
+
+
+
+
+	public boolean isChildNoun(String noun,NounSynset root) throws InterruptedException {
 		Queue<NounSynset> squeue = new Queue<>();
-		squeue.enqueue(root));
+		squeue.enqueue(root);
 		while(!squeue.isEmpty()) {
 			NounSynset temp = squeue.dequeue();
 			if (temp.getWordForms().toString().contains(noun)) {
@@ -124,6 +251,41 @@ public class WordnetModel extends Model {
 			}
 		}
 		return false;
+	}
+	
+	// first = number of nodes below this one
+	public Pair<Integer,Integer> evaluateNode(Pair<Pair<NounSynset,NounSynset>,Double> input) throws InterruptedException {
+		Queue<NounSynset> squeue = new Queue<>();
+		int totalNodes = 0;
+		squeue.enqueue(input.getX().getY());
+		while (!squeue.isEmpty()) {
+			NounSynset temp = squeue.dequeue();
+			totalNodes++;
+			for (NounSynset s : temp.getHyponyms()) {squeue.enqueue(s);}
+		}
+		return null;
+	}
+	/*
+	public static Set<Synset> findRootNoun(NounSynset start) throws InterruptedException {
+		Queue<NounSynset> squeue = new Queue<>();
+		Set<Synset> out = new HashSet<>();
+		squeue.enqueue(start);
+		while (!squeue.isEmpty()) {
+			NounSynset tmp = squeue.dequeue();
+			NounSynset[] hyp = tmp.getHypernyms();
+			if (hyp.length ==0) {
+				out.add(tmp);
+			} else {
+				for (NounSynset s : hyp) {squeue.enqueue(s);}
+			}
+		}
+		return out;
+		
+	}
+	*/
+	
+	public WordnetModel() {
+		this.initilzieWordnet();
 	}
 	
 	@Override
@@ -140,3 +302,23 @@ public class WordnetModel extends Model {
 	
 	
 }
+
+class Node {
+	Node parent;
+	Synset synset;
+	Node[] children;
+	double probability;
+	
+	public Node(Synset root) {
+		this.synset = root;
+		this.parent = null;
+	}
+	
+	public Node(Node parent, Synset set) {
+		this.synset = set;
+		this.parent = parent;
+	}
+}
+
+
+
