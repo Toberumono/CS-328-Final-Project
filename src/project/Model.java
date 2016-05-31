@@ -17,6 +17,11 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.regex.MatchResult;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import coreNLP.Stemmer;
 import edu.mit.jwi.Dictionary;
@@ -28,6 +33,8 @@ import edu.stanford.nlp.trees.TypedDependency;
 public abstract class Model {
 	protected static final Collection<String> KEPT_RELS =
 			Collections.unmodifiableCollection(new HashSet<>(Arrays.asList("nominal subject", "adverbial modifier", "direct object", "adjectival modifier", "compound modifier", "nominal modifier")));
+	protected static final ExecutorService pool = Executors.newWorkStealingPool();
+	private static final Pattern keySplitter = Pattern.compile("(\\w+) :: (\\w+) ~ (\\w+) :: (\\w+)");
 	private static final WordnetStemmer stemmer;
 	static {
 		WordnetStemmer wns = null;
@@ -212,6 +219,19 @@ public abstract class Model {
 	
 	public String generateKey(String word, String tag) {
 		return word.toLowerCase() + " :: " + tag.substring(0, 2);
+	}
+	
+	/**
+	 * Splits the given {@code key} into its 4 parts: gov, gov_pos, dep, and dep_pos
+	 * 
+	 * @param key
+	 *            the key to split
+	 * @return a {@link MatchResult} wherein groups 1-4 correspond to the 4 parts of the key
+	 */
+	public MatchResult splitKey(String key) {
+		Matcher m = keySplitter.matcher(key);
+		m.find();
+		return m.toMatchResult();
 	}
 	
 	public void storeModel(Path root) throws IOException {
