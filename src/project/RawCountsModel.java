@@ -5,13 +5,13 @@ import java.nio.file.Path;
 
 import edu.stanford.nlp.trees.TypedDependency;
 
-public class CutoffLexicalHierarchy extends Model {
+public class RawCountsModel extends Model {
 
-	public CutoffLexicalHierarchy(boolean requireSynchronized) {
+	public RawCountsModel(boolean requireSynchronized) {
 		super(requireSynchronized);
 	}
 
-	public CutoffLexicalHierarchy(Path root, boolean requireSynchronized) throws IOException {
+	public RawCountsModel(Path root, boolean requireSynchronized) throws IOException {
 		super(root, requireSynchronized);
 	}
 

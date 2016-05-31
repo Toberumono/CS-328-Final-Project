@@ -48,7 +48,7 @@ public class CorpusParser {
 		
 		String text = "I can almost always tell when movies use fake dinosaurs.";//BNCScraper.scrapeBNCFile(Paths.get("/Users/joshualipstone/Downloads/2554/2554/download/Texts/A/A0/A00.xml"));
 		
-		Model model = new CutoffLexicalHierarchy(false);
+		Model model = new RawCountsModel(false);
 		MaxentTagger tagger = new MaxentTagger(taggerPath);
 		DependencyParser parser = DependencyParser.loadFromModelFile(modelPath);
 		
