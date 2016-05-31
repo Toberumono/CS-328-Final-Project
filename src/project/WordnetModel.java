@@ -76,7 +76,7 @@ public class WordnetModel extends Model {
 			WordnetModel m = new WordnetModel(Paths.get("/Users/jamie/Documents/College/Junior Year/Computational Cognition/CS328Final/BNC Digested/Corpus.medium"), false);
 			System.out.println("develop: " + m.getGeneralization("direct object", "economy", "develop"));
 			System.out.println("eat: " + m.getGeneralization("direct object", "chicken", "eat"));
-			System.out.println("eat: " + m.getGeneralization("direct object", "juice", "eat"));
+			System.out.println("eat: " + m.getGeneralization("direct object", "economy", "eat"));
 			System.out.println("justify: " + m.getGeneralization("nominal subject", "means", "justify"));
 			System.out.println("justify: " + m.getGeneralization("nominal subject", "ends", "justify"));
 			//System.out.println("justify: " + m.getGeneralization("nominal subject", "justify", "ends"));
@@ -138,11 +138,13 @@ public class WordnetModel extends Model {
 		return out;
 	}
 	
+	
+	
+	
 	// For right now this is only for verbs, will generalize later
 	public double getGeneralization(String marker, String nn, String vb) throws InterruptedException {
 		convertToProbs();
 		// List<Triple<Synset,Double>> out = new ArrayList<>();
-		// TODO add code here that resets probs to zero. 
 		resetProbablities();
 		
 		// Counting all the instances of nouns in the tree
@@ -151,8 +153,11 @@ public class WordnetModel extends Model {
 		String gov = generateKey(vb, "VB");
 		for (Entry<String, Double> e : probs.get(marker).entrySet()) {
 			if (e.getKey().startsWith(gov)) {
-				sum += e.getValue(); /// counts.get(marker)
-				usedIDs.add(new Pair<>(e.getKey().substring(e.getKey().indexOf('~') + 2), e.getValue()));
+				if (NounTreeMap.get(splitKey(e.getKey()).group(3))!=null) {
+					sum += e.getValue(); /// counts.get(marker)
+					usedIDs.add(new Pair<>(e.getKey().substring(e.getKey().indexOf('~') + 2), e.getValue()));
+				}
+				
 			}
 		}
 		System.out.println(sum);
@@ -201,14 +206,20 @@ public class WordnetModel extends Model {
 		}
 		
 		Set<Node> cuts = findMDL(wordnetNounTree, vb, marker);
-		System.err.println("the size of the array " + cuts.size());
+		System.err.println("the size of the cust " + cuts.size());
 		System.err.println(cuts.contains(wordnetNounTree));
-		System.err.println(cuts.iterator().next().probability);
+		//System.err.println(cuts.iterator().next().probability);
+		for (Node n : cuts) {
+			System.out.println(n.probability + "  =" + n.synset.getDefinition());
+		}
+		
+		
 		for (Node n : cuts) {
 			if (isChildNoun(nn, (NounSynset) n.synset)) {
 				return n.probability / n.numNouns;
 			}
 		}
+		System.err.println("The word was not found");
 		System.err.println("the size of the array " + cuts.size());
 		System.err.println(cuts.contains(wordnetNounTree));
 		System.err.println(cuts.iterator().next().probability);
@@ -277,14 +288,20 @@ public class WordnetModel extends Model {
 			for (Node ci : start.children) {
 				c.addAll(findMDL(ci, vb, marker));
 			}
+			// Setting root to have probability temprorarily for ldash function
+			double startprob = start.probability;
+			for (Node ci : c) {
+				start.probability += ci.probability;
+			}
+			//System.out.println("This cluster probability =" + start.probability);
+			//System.out.println("num clusters below = " + start.numNodes);
+			//System.out.println("ldash root =" + ldash(root,vb,marker) + "   ldash children =" + ldash(c, vb, marker));
 			if (ldash(root, vb, marker) < ldash(c, vb, marker)) {
-				// Assigning the probabilit of the subpartition.
-				for (Node ci : c) {
-					start.probability += ci.probability;
-				}
+				// Assigning the probability of the subpartition.
 				return root;
 			}
 			else {
+				start.probability = startprob;
 				return c;
 			}
 		}
@@ -293,8 +310,18 @@ public class WordnetModel extends Model {
 	// TODO stub method, figure out the math
 	private double ldash(Set<Node> root, String vb, String marker) {
 		// TODO deal with the null pointer on unseen thing
-		double t1 = ((root.size() + 1) / 2.0) * Math.log(probs.get(marker + "_g").get(generateKey(vb, "VB")) * counts.get(marker));
+		//System.err.println(probs.get(marker + "_g").get(generateKey(vb, "VB")) * counts.get(marker));
+		double t1 = ((root.size() - 1) / 2.0) * Math.log(probs.get(marker + "_g").get(generateKey(vb, "VB")) * counts.get(marker))/Math.log(2);
 		double t2 = 0;
+		for (Node n : root) {
+			if (n.probability!=0) {
+				t2 = t2 - n.probability*(probs.get(marker + "_g").get(generateKey(vb, "VB")) * counts.get(marker))
+						*Math.log(n.probability/n.numNodes);//Math.log(2);
+			}
+		}
+		//System.out.println("t2 =" + t2);
+		
+		
 		return t1 + t2;
 	}
 	
@@ -369,6 +396,23 @@ public class WordnetModel extends Model {
 		// TODO Auto-generated method stub
 		return null;
 	}
+	
+	@Override
+	public Double getHighestProbabilityForBigram(String first, String firstPos, String second, String secondPos) {
+		try {
+			Double p1 = getGeneralization("direct object",first,second);
+			Double p2 = getGeneralization("direct object",second,first);
+			Double p3 = getGeneralization("nominal subject",first,second);
+			Double p4 = getGeneralization("nominal subject",second,first);
+			return Math.max(p1, Math.max(p2, Math.max(p3, p4)));
+		}
+		catch (InterruptedException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		return 0.0;
+	}
+	
 	
 }
 
