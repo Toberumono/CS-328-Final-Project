@@ -153,6 +153,7 @@ public class WordnetModel extends Model {
 		String gov = generateKey(vb, "VB");
 		for (Entry<String, Double> e : probs.get(marker).entrySet()) {
 			if (e.getKey().startsWith(gov)) {
+				System.out.println(e.getKey());
 				if (NounTreeMap.get(splitKey(e.getKey()).group(3))!=null) {
 					sum += e.getValue(); /// counts.get(marker)
 					usedIDs.add(new Pair<>(e.getKey().substring(e.getKey().indexOf('~') + 2), e.getValue()));
