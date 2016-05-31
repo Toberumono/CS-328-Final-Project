@@ -38,7 +38,7 @@ public class BNCScraper {
 				}
 				return new ConsCell(m.group(3), text);
 			}));
-			lexer.addRule("Punc", new BasicRule(Pattern.compile("<c( .*?)?((?<!/)>)(.+?)</c>"), (l, s, m) -> {
+			lexer.addRule("Punc", new BasicRule(Pattern.compile("<c( [^>]*?)?((?<!/)>)(.+?)</c>"), (l, s, m) -> {
 				if (m.group(3).equals("\u2026"))
 					return new ConsCell(", ", text);
 				return new ConsCell(m.group(3), text);
