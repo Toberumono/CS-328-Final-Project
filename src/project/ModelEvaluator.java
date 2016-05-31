@@ -89,7 +89,7 @@ public class ModelEvaluator {
 	public static void main(String[] args) throws IOException {
 		ModelEvaluator me = new ModelEvaluator();
 		me.digestTestData(Paths.get("./Keller_Lapata_2003_Plausibility_Data/items"), Paths.get("./Keller_Lapata_2003_Plausibility_Data/means"));
-		Model model = new CutoffLexicalHierarchy(Paths.get(args[0]), false);
+		Model model = new RawCountsModel(Paths.get("/Users/joshualipstone/Downloads/LiModel"), false);
 		me.ingestModel(model);
 		double[][] xy;
 		PearsonsCorrelation cor;
