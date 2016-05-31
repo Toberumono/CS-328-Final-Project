@@ -34,7 +34,7 @@ public abstract class Model {
 	protected static final Collection<String> KEPT_RELS =
 			Collections.unmodifiableCollection(new HashSet<>(Arrays.asList("nominal subject", "adverbial modifier", "direct object", "adjectival modifier", "compound modifier", "nominal modifier")));
 	protected static final ExecutorService pool = Executors.newWorkStealingPool();
-	private static final Pattern keySplitter = Pattern.compile("(\\w+) :: (\\w+) ~ (\\w+) :: (\\w+)");
+	private static final Pattern keySplitter = Pattern.compile("((.+) :: (.+)) ~ ((.+) :: (.+))");
 	private static final WordnetStemmer stemmer;
 	static {
 		WordnetStemmer wns = null;
@@ -222,11 +222,14 @@ public abstract class Model {
 	}
 	
 	/**
-	 * Splits the given {@code key} into its 4 parts: gov, gov_pos, dep, and dep_pos
+	 * Splits the given {@code key} into its 4 parts: gov, gov_pos, dep, and dep_pos.<br>
+	 * In the generated {@link MatchResult}, group 1 corresponds to the gov key, groups 2 and 3 correspond to gov and
+	 * gov_pos, 4 corresponds to the dep key, and groups 5 and 6 correspond to dep and dep_pos.
 	 * 
 	 * @param key
 	 *            the key to split
-	 * @return a {@link MatchResult} wherein groups 1-4 correspond to the 4 parts of the key
+	 * @return a {@link MatchResult} wherein group 1 corresponds to the gov key, groups 2 and 3 correspond to gov and
+	 *         gov_pos, 4 corresponds to the dep key, and groups 5 and 6 correspond to dep and dep_pos
 	 */
 	public MatchResult splitKey(String key) {
 		Matcher m = keySplitter.matcher(key);
