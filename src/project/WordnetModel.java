@@ -28,6 +28,7 @@ public class WordnetModel extends Model {
 	private static Map<String, List<Node>> NounTreeMap;
 	private static Node wordnetNounTree;
 	
+	// main method that contains test code that was used to test the model and wordnet 
 	public static void main(String[] args) {
 		try {
 			NounSynset nounSynset;
@@ -89,6 +90,18 @@ public class WordnetModel extends Model {
 		}
 	}
 	
+	/*
+	 * Method that creates a tree based on the nouns synsets of wordnet.
+	 * 
+	 * Creates the tree by starting at the constant "entity" synset in the wordnet hierarchy and navigates 
+	 * WordNet using a breadth first search algorithm
+	 * 
+	 * Will create unique nodes for branching paths through the tree, resutling in multiple nodes 
+	 * corresponding to a single synset
+	 * 
+	 * Addionally will create a map that associates a particular synset (which turns out to be mappable) with 
+	 * all of the nodes that own it. 
+	 */
 	public void initilzieWordnet() {
 		wordnetNounTree = new Node(wordnetDB.getSynsets("entity", SynsetType.NOUN)[0]);
 		NounTreeMap = new HashMap<>();
@@ -137,14 +150,18 @@ public class WordnetModel extends Model {
 		return out;
 	}
 	
-	// For right now this is only for verbs, will generalize later
+	/*
+	 * Primary method for returning statistical results over the wordnet tree. 
+	 * 
+	 * Takes in a verb and a target noun for gernalization and will perform MDL cut algorithm upon the data to generate 
+	 * a set of "cuts" represetning the minimum description length of the file assuming that every cut has an even 
+	 * probablity and that the probability of a given cut is distrubuted over the entire graph. 
+	 * 
+	 * Returns a double in the range [0.0-1.0] that corresponds to the predicted likelyhood of that particular verb-noun
+	 * occuring in the specified marker slot in the network. 
+	 */
 	public double getGeneralization(String marker, String nn, String vb) {
-		//System.out.println(vb);
-		//System.out.println(probs.get(marker + "_g").get(generateKey(vb, "VB")));
-		
-		//System.out.println(x);
-		//System.out.println(probs.get(marker + "_g").get(generateKey(vb, "VB")));
-		
+		// Filtering out verbs that don't occur in the dataset
 		if (probs.get(marker + "_g").get(generateKey(vb, "VB")) == null) {
 			return 0.0;
 		}
@@ -173,7 +190,6 @@ public class WordnetModel extends Model {
 				
 			}
 		}
-		//System.out.println("sum equals: " + sum);
 		Double totalprob = 0.0;
 		
 		// Mapping those counts to the tree
@@ -207,10 +223,9 @@ public class WordnetModel extends Model {
 			}
 			
 		}
-		//System.out.println("total probablity added =" + totalprob);
+
 		Set<Node> populated = getProbablilityClusters(wordnetNounTree);
-		//System.out.println("Before collapseing there are " + populated.size() + " nodes in the tree");
-		// Collapsing probabilites into parents
+		// Collapsing probabilites into parents based on the methods specified in our paper 
 		for (Node n : visited) {
 			Node current = n;
 			while (current.parent != null) {
@@ -237,9 +252,6 @@ public class WordnetModel extends Model {
 		//System.out.println("There are " + populated.size() + " nodes in the tree");
 		
 		cuts.addAll(populated);
-		//for (Node n : cuts) {
-		//System.out.println(n.probability + "  =" + n.synset.getDefinition());
-		//}
 		
 		// Finds all locations in the tree the given noun appears, then checks the the cut set for every 
 		// synset that the target noun appears and adds the probability of that synset to the total 
@@ -260,14 +272,11 @@ public class WordnetModel extends Model {
 			
 		}
 		return prob;
-		
-		//System.err.println("The word was not found");
-		//System.err.println("the size of the array " + cuts.size());
-		//System.err.println(cuts.contains(wordnetNounTree));
-		//System.err.println(cuts.iterator().next().probability);
-		//return 0.0;
 	}
 	
+	/*
+	 * Method that resets the probability of every node in the tree to 0 using a depth first search algorithm
+	 */
 	private void resetProbablities(Node n) {
 		Queue<Node> squeue = new LinkedBlockingQueue<>();
 		squeue.add(n);
@@ -281,6 +290,13 @@ public class WordnetModel extends Model {
 		
 	}
 	
+	/*
+	 * MDL method specified in the Li and Abe 1998 paper. 
+	 * 
+	 * Caluclates the MDL of the given subtree and compares the MDL of the root node were all of the 
+	 * subprobability collapsed into it, with the probabilty of the MDL of each subtree and chooses 
+	 * which cut will be optimal. 
+	 */
 	private Set<Node> findMDL(Node start, String vb, String marker) {
 		if (start.children.length == 0) {
 			Set<Node> out = new HashSet<>();
@@ -302,16 +318,9 @@ public class WordnetModel extends Model {
 				start.probability += n.probability;
 				//n.probability = 0;
 			}
-			if ((startprob != 0.0) && (start.probability != startprob)) {
-				//System.out.println("Somewhere folding didn't work");
-			}
-			
-			//**//System.out.println("This cluster probability =" + start.probability);
-			//**//System.out.println("num clusters below = " + start.numNodes);
-			//**//System.out.println("ldash root =" + ldash(root,vb,marker) + "   ldash children =" + ldash(c, vb, marker));
+
 			if (ldash(root, vb, marker) < ldash(c, vb, marker)) {
 				// Assigning the probability of the subpartition.
-				//for (Node n : c) {n.probability =0;}
 				for (Node n : this.getProbablilityClusters(start)) {
 					//start.probability+= n.probability;
 					n.probability = 0;
@@ -325,25 +334,25 @@ public class WordnetModel extends Model {
 		}
 	}
 	
-	// TODO stub method, figure out the math
+	/*
+	 * Method that calculates the MDL of a given set of nodes according to the algorithm specified in Li and Abe 1998
+	 */
 	private double ldash(Set<Node> root, String vb, String marker) {
-		// TODO deal with the null pointer on unseen thing
-		//System.err.println(counts.get(marker));
-		//System.err.println(probs.get(marker + "_g").get(generateKey(vb, "VB")));
-		//System.err.println(probs.get(marker + "_g").get(generateKey(vb, "VB")) * counts.get(marker));
 		double t1 = ((root.size() - 1) / 2.0) * Math.log(probs.get(marker + "_g").get(generateKey(vb, "VB")) * counts.get(marker)) / Math.log(2);
-		//double t1 = 0;
 		double t2 = 0;
 		for (Node n : root) {
 			if (n.probability != 0) {
 				t2 = t2 - n.probability * (probs.get(marker + "_g").get(generateKey(vb, "VB")) * counts.get(marker)) * Math.log(n.probability / n.numNodes) / Math.log(2);
 			}
 		}
-		//**//System.out.println("t2 =" + t2);
-		
 		return t1 + t2;
 	}
 	
+	/*
+	 * Helper method that uses bredth-first-search to poll the tree for whether it contains a given node
+	 * 
+	 * Takes node target and returns true if it is in the subtree described by the node scope
+	 */
 	private boolean isChildNode(Node target, Node scope) {
 		Queue<Node> squeue = new LinkedBlockingQueue<>();
 		squeue.add(scope);
@@ -359,6 +368,9 @@ public class WordnetModel extends Model {
 		return false;
 	}
 	
+	/*
+	 * Various constructors
+	 */
 	public WordnetModel(boolean requireSynchronized) {
 		super(requireSynchronized);
 		this.initilzieWordnet();
@@ -381,6 +393,9 @@ public class WordnetModel extends Model {
 		return Math.max(p1, p3);
 	}
 	
+	/*
+	 * Method that returns a set of every node in the subtree that has a non-zero probability
+	 */
 	private Set<Node> getProbablilityClusters(Node root) {
 		Set<Node> out = new HashSet<>();
 		Queue<Node> squeue = new LinkedBlockingQueue<>();
@@ -399,6 +414,9 @@ public class WordnetModel extends Model {
 	
 }
 
+/*
+ * Helper class that encapsulates information about a single node of the tree
+ */
 class Node {
 	Node parent;
 	Synset synset;
@@ -420,26 +438,4 @@ class Node {
 		this.numNodes = 1;
 		this.numNouns = synset.getWordForms().length;
 	}
-	/*
-	@Override
-	public int hashCode() {
-		return Objects.hash(parent, synset, Arrays.hashCode(children), probability, numNouns, numNodes);
-	}
-	
-	@Override
-	public boolean equals(Object other) {
-		if (!(other instanceof Node))
-			return this == other;
-		Node o = (Node) other;
-		if (children.length != o.children.length)
-			return false;
-		for (int i = 0; i < children.length; i++)
-			if (!children[i].equals(o.children[i]))
-				return false;
-		return parent.equals(o.parent) && synset.equals(o.synset) && probability == o.probability && numNouns == o.numNouns && numNodes == o.numNodes;
-	}
-	
-	private boolean childlessEquals(Node other) {
-		
-	}*/
 }
