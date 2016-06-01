@@ -4,6 +4,7 @@ import java.io.BufferedWriter;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.net.URL;
+import java.nio.file.DirectoryStream;
 import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -30,13 +31,18 @@ import edu.mit.jwi.morph.WordnetStemmer;
 import edu.stanford.nlp.ling.IndexedWord;
 import edu.stanford.nlp.trees.TypedDependency;
 
+/**
+ * The base class for the models used in our project.
+ * 
+ * @author Joshua Lipstone
+ */
 public abstract class Model {
 	protected static final Collection<String> KEPT_RELS =
 			Collections.unmodifiableCollection(new HashSet<>(Arrays.asList("nominal subject", "adverbial modifier", "direct object", "adjectival modifier", "compound modifier", "nominal modifier")));
 	protected static final ExecutorService pool = Executors.newWorkStealingPool();
 	private static final Pattern keySplitter = Pattern.compile("((.+) :: (.+)) ~ ((.+) :: (.+))");
 	private static final WordnetStemmer stemmer;
-	static {
+	static { //This block is automatically run the first time the class is initialized the JVM.  This means that it is guarenteed to run exactly once.
 		WordnetStemmer wns = null;
 		try {
 			URL url = new URL("file", null, System.getProperty("wordnet.database.dir"));
@@ -45,7 +51,9 @@ public abstract class Model {
 			wns = new WordnetStemmer(dict);
 		}
 		catch (IOException e) {
-			e.printStackTrace();
+			System.err.println("Please set the wordnet.database.dir system property. If you installed WordNet 3.1 through Homebrew, include" +
+					"\n'-Dwordnet.database.dir=\"/usr/local/Cellar/wordnet/3.1/dict\"' in your launch command.");
+			throw new RuntimeException();
 		}
 		stemmer = wns;
 		Runtime.getRuntime().addShutdownHook(new Thread(() -> {
@@ -59,6 +67,12 @@ public abstract class Model {
 	protected Map<String, Integer> counts;
 	private boolean converted, smoothed;
 	
+	/**
+	 * Constructs an empty {@link Model}
+	 * 
+	 * @param requireSynchronized
+	 *            if {@code true}, the constructed {@link Model} should use thread-safe operations only
+	 */
 	public Model(boolean requireSynchronized) {
 		this.requireSynchronized = requireSynchronized;
 		probs = this.requireSynchronized ? Collections.synchronizedMap(new HashMap<>()) : new HashMap<>();
@@ -67,21 +81,31 @@ public abstract class Model {
 		smoothed = false;
 	}
 	
+	/**
+	 * Constructs a {@link Model} using the data found in {@code root}.
+	 * 
+	 * @param root
+	 *            the {@link Path} to the root directory of the {@link Model Model's} data
+	 * @param requireSynchronized
+	 *            if {@code true}, the constructed {@link Model} should use thread-safe operations only
+	 * @throws IOException
+	 *             if an I/O error occurs while loading the stored data
+	 */
 	public Model(Path root, boolean requireSynchronized) throws IOException {
 		this(requireSynchronized);
-		SimpleFileVisitor<Path> visitor = new SimpleFileVisitor<Path>() {
+		SimpleFileVisitor<Path> visitor = new SimpleFileVisitor<Path>() { //This allows files in the model to be organized instead of all being in the root directory
 			@Override
 			public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
-				System.out.println(file);
+				System.err.println("Loading: " + file);
 				String name = file.getFileName().toString();
-				if (name.equals("STORED_COUNTS")) {
+				if (name.equals("STORED_COUNTS")) { //The counts for every map are stored in a separate file for ease of parsing
 					initCounts();
 					Files.lines(file).forEach(line -> {
 						int equals = line.lastIndexOf('=');
 						counts.put(line.substring(0, equals).trim(), Integer.parseInt(line.substring(equals + 1).trim()));
 					});
 				}
-				else if (name.equals("STORED_STATE")) {
+				else if (name.equals("STORED_STATE")) { //The state of the model is stored in a file for extensibility purpose (by default just whether it's values have been converted to probabilities and whether those probabilities have been smoothed)
 					Files.lines(file).forEach(Model.this::parseStateLine);
 				}
 				else {
@@ -109,6 +133,12 @@ public abstract class Model {
 		}
 	}
 	
+	/**
+	 * Converts the counts in the {@link Model} to probabilities by dividing the number of times each relationship has been
+	 * seen by the total number of times that relationships of that type have been seen.<br>
+	 * <b>Note:</b> this method internally tracks whether it has already been run on the {@link Model}. Therefore, it is safe
+	 * to call it multiple times.
+	 */
 	public void convertToProbs() {
 		if (converted) //Outside of synchronized block to avoid that step if possible
 			return;
@@ -124,7 +154,13 @@ public abstract class Model {
 		}
 	}
 	
-	protected void smooth() {
+	/**
+	 * Smoothes the probabilities in the {@link Model}.<br>
+	 * <b>Note:</b> <i>This method assumes that {@link #convertToProbs()} has already been called.</i><br>
+	 * <b>Note:</b> This method internally tracks whether it has already been run on the {@link Model}. Therefore, it is safe
+	 * to call it multiple times.
+	 */
+	public void smooth() {
 		if (smoothed)
 			return;
 		synchronized (probs) {
@@ -152,14 +188,29 @@ public abstract class Model {
 				td.gov().tag().length() > 1 && td.dep().tag().length() > 1;
 	}
 	
+	/**
+	 * Stems the passed {@link TypedDependency} (specifically it's {@link TypedDependency#gov() gov} and
+	 * {@link TypedDependency#dep() dep} fields) <i>in place</i> using the algorithm specified by the {@link Model}.<br>
+	 * <b>Note:</b> This may modify the tag as well as the word.
+	 * 
+	 * @param td
+	 *            the {@link TypedDependency} to stem
+	 */
 	public void stem(TypedDependency td) {
 		stem(td.gov());
 		stem(td.dep());
 		return;
 	}
 	
+	/**
+	 * Stems the passed {@link IndexedWord} <i>in place</i> using the algorithm specified by the {@link Model}.<br>
+	 * <b>Note:</b> This may modify the tag as well as the word.
+	 * 
+	 * @param iw
+	 *            the {@link IndexedWord} to stem
+	 */
 	public void stem(IndexedWord iw) {
-		if (iw.tag().startsWith("NNP")) {
+		if (iw.tag().startsWith("NNP")) { //We do this with all proper nouns in order to have sufficient data for how they can be used.
 			iw.setWord("{PROPER NOUN}");
 			iw.setTag("NNP");
 			return;
@@ -172,24 +223,31 @@ public abstract class Model {
 		return;
 	}
 	
+	/**
+	 * Determines whether the given {@link IndexedWord} should be stemmed.
+	 * 
+	 * @param iw
+	 *            the {@link IndexedWord} to stem
+	 * @return {@code true} iff {@code iw} should be stemmed
+	 */
 	protected boolean shouldStem(IndexedWord iw) {
-		return iw.tag().length() > 2 && (iw.tag().startsWith("VB") || iw.tag().startsWith("NN")); //If it is a non-base-form verb
+		return iw.tag().length() > 2 && (iw.tag().startsWith("VB") || iw.tag().startsWith("NN")); //If it is a non-base-form verb or noun
 	}
 	
+	/**
+	 * Adds the bigram specified by the {@link TypedDependency} to the {@link Model}.
+	 * 
+	 * @param td
+	 *            the {@link TypedDependency} to add to the {@link Model}
+	 */
 	public void addBigram(TypedDependency td) {
-		/*
-		System.out.println("REL: " + td.reln().getLongName());
-		System.out.println("GOV: " + td.gov().word() + " :: " + td.gov().tag());
-		System.out.println("DEP: " + td.dep().word() + " :: " + td.dep().tag());
-		System.out.println("---------------------------------");
-		*/
 		if (!shouldRecord(td))
 			return;
 		initCounts();
 		stem(td);
 		String name = td.reln().getLongName(), gov = generateKey(td.gov()), dep = generateKey(td.dep()), key = gov + " ~ " + dep;
 		if (!probs.containsKey(name)) {
-			synchronized (probs) {
+			synchronized (probs) { //If we haven't added a relation of this type before, we need to initialize its maps
 				if (!probs.containsKey(name)) { //Have to re-check inside the synchronized block
 					probs.put(name, new HashMap<>());
 					probs.put(name + "_g", new HashMap<>());
@@ -198,7 +256,7 @@ public abstract class Model {
 				}
 			}
 		}
-		synchronized (probs.get(name)) {
+		synchronized (probs.get(name)) { //At this point, we know that that map exists, so we can synchronize on it, thereby allowing different types relations to be added in parallel, thereby reducing the bottleneck 
 			probs.get(name).put(key, probs.get(name).containsKey(key) ? probs.get(name).get(key) + 1.0 : 1.0); //Increment count for pair
 			probs.get(name + "_g").put(gov, probs.get(name + "_g").containsKey(gov) ? probs.get(name + "_g").get(gov) + 1.0 : 1.0); //Increment count for gov
 			probs.get(name + "_d").put(dep, probs.get(name + "_d").containsKey(dep) ? probs.get(name + "_d").get(dep) + 1.0 : 1.0); //Increment count for dep
@@ -206,8 +264,24 @@ public abstract class Model {
 		}
 	}
 	
+	/**
+	 * Determines the highest probability across all relation types for the given bigrams that can be generated from the
+	 * given words and their PoS tags.
+	 * 
+	 * @param first
+	 *            the first word
+	 * @param firstPos
+	 *            the first word's PoS tag
+	 * @param second
+	 *            the second word
+	 * @param secondPos
+	 *            the second word's PoS tag
+	 * @return the highest probability across all relation types for the given bigrams that can be generated from the given
+	 *         words and their PoS tags
+	 */
 	public Double getHighestProbabilityForBigram(String first, String firstPos, String second, String secondPos) {
 		convertToProbs();
+		smooth();
 		double highest = 0.0;
 		String key = generateKey(first, firstPos) + " ~ " + generateKey(second, secondPos);
 		for (String mapping : counts.keySet())
@@ -220,18 +294,32 @@ public abstract class Model {
 		return highest;
 	}
 	
+	/**
+	 * Determines whether the {@link Model} contains the bigram specified by the given {@link TypedDependency}.<br>
+	 * <b>Note:</b> This method <i>will</i> modify the {@link TypedDependency} in-place.
+	 * 
+	 * @param td
+	 *            the {@link TypedDependency} for which to check
+	 * @return {@code true} iff the {@link Model} contains the bigram specified by the {@link TypedDependency}
+	 */
 	public boolean containsBigram(TypedDependency td) {
-		if (!shouldRecord(td))
+		if (!shouldRecord(td) || !probs.containsKey(td.reln().getLongName()))
 			return false;
 		stem(td);
-		String name = td.reln().getLongName();
-		if (!probs.containsKey(name))
-			return false;
-		return probs.get(name).containsKey(generateKey(td));
+		return probs.get(td.reln().getLongName()).containsKey(generateKey(td));
 	}
 	
+	/**
+	 * Determines the probability of the bigram specified by the given {@link TypedDependency}.<br>
+	 * <b>Note:</b> This method <i>will</i> modify the {@link TypedDependency} in-place.
+	 * 
+	 * @param td
+	 *            the {@link TypedDependency} that specifies the bigram for which to get the probability
+	 * @return the probability of the bigram specified by the given {@link TypedDependency}
+	 */
 	public Double probabilityForBigram(TypedDependency td) {
 		convertToProbs();
+		smooth();
 		if (!shouldRecord(td))
 			return 0.0;
 		stem(td);
@@ -242,6 +330,15 @@ public abstract class Model {
 		return probs.get(name).get(key);
 	}
 	
+	/**
+	 * Determines the total number of times that the bigram specified by the given {@link TypedDependency} has been seen.
+	 * Given that this is supposed to determine the raw counts, it's behavior is undefined on a smoothed model.<br>
+	 * <b>Note:</b> This method <i>will</i> modify the {@link TypedDependency} in-place.
+	 * 
+	 * @param td
+	 *            the {@link TypedDependency} that specifies the bigram
+	 * @return the number of times of the bigram specified by the given {@link TypedDependency}
+	 */
 	public Integer countForBigram(TypedDependency td) {
 		if (!shouldRecord(td))
 			return 0;
@@ -253,14 +350,31 @@ public abstract class Model {
 		return probs.get(name).containsKey(key) ? (int) (converted ? probs.get(name).get(key) * counts.get(name) : probs.get(name).get(key)) : 0;
 	}
 	
+	/**
+	 * @param td
+	 *            the {@link TypedDependency} for which the key should be generated
+	 * @return the key used to access data about the bigram specified by the {@link TypedDependency}
+	 */
 	public String generateKey(TypedDependency td) {
 		return generateKey(td.gov()) + " ~ " + generateKey(td.dep());
 	}
 	
+	/**
+	 * @param iw
+	 *            the {@link IndexedWord} for which the key should be generated
+	 * @return the key used to access data about the word/pos-tag pair specified by the {@link IndexedWord}
+	 */
 	public String generateKey(IndexedWord iw) {
 		return generateKey(iw.word(), iw.tag());
 	}
 	
+	/**
+	 * @param word
+	 *            the word for which to generate the key
+	 * @param tag
+	 *            the PoS tag of the word
+	 * @return the key used to access data about the given word/tag pair
+	 */
 	public String generateKey(String word, String tag) {
 		return word.toLowerCase() + " :: " + tag.substring(0, 2);
 	}
@@ -271,7 +385,7 @@ public abstract class Model {
 	 * gov_pos, 4 corresponds to the dep key, and groups 5 and 6 correspond to dep and dep_pos.
 	 * 
 	 * @param key
-	 *            the key to split
+	 *            the key of the form, "gov :: gov_pos ~ dep :: dep_pos", to split
 	 * @return a {@link MatchResult} wherein group 1 corresponds to the gov key, groups 2 and 3 correspond to gov and
 	 *         gov_pos, 4 corresponds to the dep key, and groups 5 and 6 correspond to dep and dep_pos
 	 */
@@ -281,6 +395,15 @@ public abstract class Model {
 		return m.toMatchResult();
 	}
 	
+	/**
+	 * Writes the state information of the {@link Model} (by default just whether it's values have been converted to
+	 * probabilities and whether those probabilities have been smoothed) to the given {@link BufferedWriter}
+	 * 
+	 * @param bw
+	 *            the {@link BufferedWriter} to which the state information should be written
+	 * @throws IOException
+	 *             if an I/O error occurs while writing to the {@link BufferedWriter}
+	 */
 	protected void storeState(BufferedWriter bw) throws IOException {
 		bw.write("converted = " + converted);
 		bw.newLine();
@@ -288,10 +411,31 @@ public abstract class Model {
 		bw.newLine();
 	}
 	
+	/**
+	 * Writes the {@link Model Model's} data and state information to the directory specified by {@code root}.
+	 * 
+	 * @param root
+	 *            the root directory into which the {@link Model Model's} data and state information
+	 * @throws IOException
+	 *             if an I/O error occurs
+	 */
 	public void storeModel(Path root) throws IOException {
 		convertToProbs();
 		smooth();
-		Files.createDirectories(root);
+		if (Files.exists(root)) //We wipe the old Model's files to prevent possible mixing of data
+			try (DirectoryStream<Path> stream = Files.newDirectoryStream(root)) {
+				for (Path p : stream)
+					try {
+						Files.deleteIfExists(p);
+					}
+					catch (IOException e) {
+						e.printStackTrace();
+					}
+			}
+		else
+			Files.createDirectories(root);
+		
+		//Write every map to disk
 		for (Entry<String, Map<String, Double>> entry : probs.entrySet()) {
 			Path active = root.resolve(entry.getKey());
 			Files.deleteIfExists(active);
@@ -308,6 +452,7 @@ public abstract class Model {
 				});
 			}
 		}
+		//Write the counts to disk
 		Path active = root.resolve("STORED_COUNTS");
 		Files.deleteIfExists(active);
 		Files.createFile(active);
@@ -321,7 +466,9 @@ public abstract class Model {
 					e.printStackTrace();
 				}
 			});
-		}active = root.resolve("STORED_STATE");
+		}
+		//Write the state to disk
+		active = root.resolve("STORED_STATE");
 		Files.deleteIfExists(active);
 		Files.createFile(active);
 		try (FileWriter fw = new FileWriter(active.toFile()); BufferedWriter bw = new BufferedWriter(fw)) {

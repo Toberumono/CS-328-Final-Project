@@ -16,6 +16,14 @@ import edu.stanford.nlp.trees.TypedDependency;
 
 public class SentenceEvaluator {
 	
+	/**
+	 * A trivial sentence evaluator that just averages the bigram probabilities
+	 * 
+	 * @param args
+	 *            args[0] = the path to the model data
+	 * @throws IOException
+	 *             if an I/O error occurs
+	 */
 	public static void main(String[] args) throws IOException {
 		String modelPath = DependencyParser.DEFAULT_MODEL;
 		String taggerPath = "edu/stanford/nlp/models/pos-tagger/english-left3words/english-left3words-distsim.tagger";
@@ -38,10 +46,9 @@ public class SentenceEvaluator {
 					double probability = 0.0;
 					int count = 0;
 					for (TypedDependency td : gs.allTypedDependencies()) {
-						if (model.containsBigram(td)) {
+						if (model.containsBigram(td))
 							probability += model.probabilityForBigram(td);
-							count++;
-						}
+						count++;
 					}
 					if (count == 0)
 						System.err.println("\"" + sentenceToString(sentence) + "\" does not contain any recognized related words.");

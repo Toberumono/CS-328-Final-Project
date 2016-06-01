@@ -15,6 +15,9 @@ import edu.mit.jwi.morph.WordnetStemmer;
 import edu.smu.tspell.wordnet.Synset;
 import edu.smu.tspell.wordnet.WordNetDatabase;
 
+/**
+ * Unused testing code
+ */
 public class JWIIntegration {
 	
 	public static void main(String[] args) throws IOException {

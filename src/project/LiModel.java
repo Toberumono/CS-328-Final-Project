@@ -13,6 +13,11 @@ import toberumono.structures.collections.lists.SortedList;
 import toberumono.structures.tuples.Pair;
 import toberumono.structures.tuples.Triple;
 
+/**
+ * An implementation of an Unsupervised Clustering Model
+ * 
+ * @author Joshua Lipstone
+ */
 public class LiModel extends Model {
 	
 	public LiModel(boolean requireSynchronized) {
@@ -38,12 +43,12 @@ public class LiModel extends Model {
 		@Override
 		public Pair<String, Triple<List<List<String>>, List<List<String>>, int[][]>> next() {
 			String mapping = mappings.next();
-			List<List<String>> govSet = probs.get(mapping + "_g").keySet().stream().map(s -> {
+			List<List<String>> govSet = probs.get(mapping + "_g").keySet().stream().map(s -> { //Generate the governing clusters
 				List<String> set = new ArrayList<>();
 				set.add(s);
 				return set;
 			}).collect(Collectors.toList());
-			List<List<String>> depSet = probs.get(mapping + "_d").keySet().stream().map(s -> {
+			List<List<String>> depSet = probs.get(mapping + "_d").keySet().stream().map(s -> { //Generate the dependent clusters
 				List<String> set = new ArrayList<>();
 				set.add(s);
 				return set;
@@ -52,7 +57,7 @@ public class LiModel extends Model {
 			int totalCount = counts.get(mapping);
 			
 			System.out.println(mapping + ": " + ((long) depSet.size()) * ((long) govSet.size()));
-			int[][] counts = new int[depSet.size()][govSet.size()];
+			int[][] counts = new int[depSet.size()][govSet.size()]; //Allocate and fill in the matrix
 			String key;
 			for (int i = 0; i < govSet.size(); i++) {
 				for (int j = 0; j < depSet.size(); j++) {
@@ -64,11 +69,12 @@ public class LiModel extends Model {
 		}
 	}
 	
-	public void performLDatSimplification(List<List<String>> govs, List<List<String>> deps, int[][] counts, int V, int I, int N) {
+	private void performLDatSimplification(List<List<String>> govs, List<List<String>> deps, int[][] counts, int V, int I, int N) {
+		//We declare the variables outside of the loop so that they won't be needlessly deallocated 
 		SortedList<Pair<int[], Double>> ldat = new SortedList<>((a, b) -> a.getY().compareTo(b.getY())); //int[] = {i, j}
 		List<int[]> sortedJ = new SortedList<>((a, b) -> a[1] < b[1] ? 1 : (a[1] == b[1] ? 0 : -1));
 		int[] sumsI = new int[I], sumsV = new int[V]; //f(C_x)
-		for (int i = 0; i < I; i++)
+		for (int i = 0; i < I; i++) //Initialize the summation arrays
 			for (int v = 0; v < V; v++)
 				sumsI[i] += counts[i][v];
 		for (int i = 0; i < V; i++)
@@ -92,7 +98,7 @@ public class LiModel extends Model {
 						sum += counts[j][v] != 0 ? counts[j][v] * Math.log(((double) counts[j][v]) / sumsI[j]) : 0;
 						sum -= counts[i][v] != 0 || counts[j][v] != 0 ? (counts[i][v] + counts[j][v]) * Math.log((((double) counts[i][v]) + ((double) counts[j][v])) / (sumsI[i] + sumsI[j])) : 0;
 					}
-					additionAttempt: if (sum > 0 && sum < threshold) {
+					additionAttempt: if (sum > 0 && sum < threshold) { //This is a labeled block, which allows us to break out of it if we shouldn't add the proposed merge
 						pair = new Pair<>(new int[]{i, j}, sum);
 						index = ldat.insertionIndexOf(pair);
 						for (int k = 0; k < index; k++)
@@ -113,11 +119,11 @@ public class LiModel extends Model {
 			if (ldat.size() > 0)
 				changed = true;
 			//Merge
-			ldat.forEach(e -> sortedJ.add(e.getX()));
+			ldat.forEach(e -> sortedJ.add(e.getX())); //Sort the pairs to be merged by increasing j value
 			for (int[] ij : sortedJ) {
-				if (ij[1] >= I)
+				if (ij[1] >= I) //If for some reason a merge has already been performed that broke the current merge attempt, skip the current one
 					continue;
-				for (int v = 0; v < V; v++) {
+				for (int v = 0; v < V; v++) { //Shift over everything in the column
 					counts[ij[0]][v] += counts[ij[1]][v];
 					counts[ij[1]][v] = counts[I - 1][v];
 				}
@@ -130,10 +136,10 @@ public class LiModel extends Model {
 					deps.remove(I - 1);
 				I--;
 			}
-			sortedJ.clear();
+			sortedJ.clear(); //Clear the maps for later use
 			ldat.clear();
 			
-			//LDAT PART 2
+			//LDAT PART 2 (This is the exact same logic, but it's rotated by 90 degrees
 			
 			m = I + V;
 			threshold = Math.log(m) / 2;
@@ -188,7 +194,7 @@ public class LiModel extends Model {
 	}
 	
 	@Override
-	protected void doSmoothing() { //We don't need to clear the probs map in this method because every value will be overwritten
+	protected void doSmoothing() {
 		new MatrixIterator().forEachRemaining(entry -> {
 			List<List<String>> govs = entry.getY().getX();
 			List<List<String>> deps = entry.getY().getY();
@@ -198,7 +204,8 @@ public class LiModel extends Model {
 			for (int i = 0; i < deps.size(); i++) { //deps
 				for (int j = 0; j < govs.size(); j++) { //govs
 					double prob = counts[i][j] / (((double) deps.get(i).size()) * ((double) govs.get(j).size()));
-					Map<String, Double> map = probs.get(entry.getX());
+					//We don't need to clear the probs map here because every existing value will be overwritten
+					Map<String, Double> map = probs.get(entry.getX()); //Write the smoothed probabilities to the model's internal maps
 					for (String dep : deps.get(i))
 						for (String gov : govs.get(j))
 							if (prob > 0)
@@ -209,6 +216,14 @@ public class LiModel extends Model {
 		});
 	}
 	
+	/**
+	 * The main method used to convert an existing {@link RawCountsModel RawCountsModel's} data to an {@link LiModel}.
+	 * 
+	 * @param args
+	 *            args[0] = the path to the source data, args[1] = the path to which the new model's data should be written
+	 * @throws IOException
+	 *             if an I/O error occurs
+	 */
 	public static void main(String[] args) throws IOException {
 		LiModel model = new LiModel(Paths.get(args[0]), false);
 		model.convertToProbs();

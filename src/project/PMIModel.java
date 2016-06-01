@@ -5,7 +5,6 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Map.Entry;
 import java.util.concurrent.ExecutionException;
-import java.util.regex.MatchResult;
 import java.util.stream.Collectors;
 
 public class PMIModel extends Model {
@@ -20,6 +19,7 @@ public class PMIModel extends Model {
 	
 	@Override
 	protected void doSmoothing() {
+		//We have to split smoothing into two steps here because the numbers can become too large and overflow double if we don't
 		counts.keySet().stream().map(mapping -> pool.submit(() -> {
 			String gov = mapping + "_g";
 			for (Entry<String, Double> entry : probs.get(mapping).entrySet())

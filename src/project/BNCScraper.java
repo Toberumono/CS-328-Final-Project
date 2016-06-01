@@ -16,12 +16,17 @@ import toberumono.structures.sexpressions.BasicConsType;
 import toberumono.structures.sexpressions.ConsCell;
 import toberumono.structures.sexpressions.ConsType;
 
+/**
+ * This helper class is used to cache the logic used to scrape files from the BNC.
+ * 
+ * @author Joshua Lipstone
+ */
 public class BNCScraper {
 	private static BasicLexer lexer = null;
 	private static final ConsType text = new BasicConsType("text");
 	private static final ConsType sentence = new BasicConsType("sentence");
 	
-	public static synchronized final BasicLexer getBNCScraper() {
+	public static synchronized final BasicLexer getBNCScraper() { //This initializes the rules needed to scrape files from the BNC
 		if (lexer == null) {
 			lexer = new BasicLexer(DefaultIgnorePatterns.WHITESPACE);
 			lexer.addDescender("Sentence", new BasicDescender(Pattern.compile("<s( .*?)?((?<!/)>)"), Pattern.compile("</s>", Pattern.LITERAL), (l, s, m) -> {
@@ -57,7 +62,7 @@ public class BNCScraper {
 	}
 	
 	public static String scrapeBNCText(String text) {
-		text = text.replaceAll("<teiHeader>.*?</teiHeader>", "");
+		text = text.replaceAll("<teiHeader>.*?</teiHeader>", ""); //Remove the header information because it is a pain.
 		StringBuilder output = new StringBuilder(text.length() / 3);
 		ConsCell out;
 		try {
@@ -75,6 +80,14 @@ public class BNCScraper {
 		return output.toString();
 	}
 	
+	/**
+	 * Simple test method
+	 * 
+	 * @param args
+	 *            command-line arguments (ignored)
+	 * @throws IOException
+	 *             if an I/O error occurs
+	 */
 	public static void main(String[] args) throws IOException {
 		System.out.println(scrapeBNCFile(Paths.get("/Users/joshualipstone/Downloads/2554/2554/download/Texts/A/A0/A00.xml")));
 	}

@@ -5,6 +5,9 @@ import java.util.Scanner;
 import edu.smu.tspell.wordnet.Synset;
 import edu.smu.tspell.wordnet.WordNetDatabase;
 
+/**
+ * Unused testing code
+ */
 public class JAWSIntegration {
 	/**
 	 * Main entry point. The command-line arguments are concatenated together (separated by spaces) and used as the word form
@@ -46,7 +49,7 @@ public class JAWSIntegration {
 				String input;
 				System.out.println("Please enter a word to stem. (type sys:exit to quit):");
 				while (!(input = inp.nextLine()).equals("sys:exit")) {
-				//  Get the synsets containing the wrod form
+					//  Get the synsets containing the wrod form
 					WordNetDatabase database = WordNetDatabase.getFileInstance();
 					Synset[] synsets = database.getSynsets(input);
 					//  Display the word forms and definitions for synsets retrieved
