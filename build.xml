@@ -43,9 +43,9 @@
 
 	<patternset id="libraries">
 		<!--Add the names of the libraries to be included here.-->
-		<include name="Utils.jar" />
-		<include name="Structures.jar" />
-		<include name="Lexer.jar" />>
+		<include name="**/Utils.jar" />
+		<include name="**/Structures.jar" />
+		<include name="**/Lexer.jar" />>
 		<include name="**/slf4j*.jar" />
 		<include name="**/commons-math3-*.jar" />
 		<include name="**/edu.mit.jwi_*.jar" />
