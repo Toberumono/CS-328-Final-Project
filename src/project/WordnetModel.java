@@ -137,11 +137,17 @@ public class WordnetModel extends Model {
 		return out;
 	}
 	
-	
-	
-	
 	// For right now this is only for verbs, will generalize later
 	public double getGeneralization(String marker, String nn, String vb) throws InterruptedException {
+		//System.out.println(vb);
+		//System.out.println(probs.get(marker + "_g").get(generateKey(vb, "VB")));
+		
+		//System.out.println(x);
+		//System.out.println(probs.get(marker + "_g").get(generateKey(vb, "VB")));
+		
+		if (probs.get(marker + "_g").get(generateKey(vb, "VB"))==null) {
+			return 0.0;
+		}
 		convertToProbs();
 		resetProbablities(wordnetNounTree);
 		
@@ -154,9 +160,9 @@ public class WordnetModel extends Model {
 				//**//System.out.println(e.getKey());
 				//**//System.out.print("  " + splitKey(e.getKey()).group(5));
 				Synset[] synsets = wordnetDB.getSynsets(splitKey(e.getKey()).group(5), SynsetType.NOUN);
-				boolean words = false; 
+				boolean words = false;
 				for (Synset s : synsets) {
-					if (NounTreeMap.get(s.getDefinition())!=null) {
+					if (NounTreeMap.get(s.getDefinition()) != null) {
 						words = true;
 					}
 				}
@@ -179,9 +185,10 @@ public class WordnetModel extends Model {
 			int totalinstances = 0;
 			for (Synset s : synsets) {
 				List<Node> tmp = NounTreeMap.get(s.getDefinition());
-				if (tmp!=null) {
+				if (tmp != null) {
 					totalinstances = totalinstances + tmp.size();
-				} else {
+				}
+				else {
 					//System.out.println(ID.getX());
 				}
 				
@@ -189,9 +196,9 @@ public class WordnetModel extends Model {
 			
 			for (Synset s : synsets) {
 				List<Node> tmp = NounTreeMap.get(s.getDefinition());
-				if (tmp!=null) {
+				if (tmp != null) {
 					for (Node n : tmp) {
-						totalprob +=(prob / totalinstances);
+						totalprob += (prob / totalinstances);
 						n.probability = n.probability + (prob / totalinstances);
 						visited.add(n);
 					}
@@ -231,7 +238,7 @@ public class WordnetModel extends Model {
 		
 		cuts.addAll(populated);
 		//for (Node n : cuts) {
-			//System.out.println(n.probability + "  =" + n.synset.getDefinition());
+		//System.out.println(n.probability + "  =" + n.synset.getDefinition());
 		//}
 		
 		// Finds all locations in the tree the given noun appears, then checks the the cut set for every 
@@ -241,10 +248,12 @@ public class WordnetModel extends Model {
 		
 		for (Synset s : wordnetDB.getSynsets(nn, SynsetType.NOUN)) {
 			List<Node> locations = NounTreeMap.get(s.getDefinition());
-			for (Node target : locations) {
-				for (Node n : cuts) {
-					if (isChildNode(target, n)) {
-						prob+= n.probability / n.numNouns;
+			if (locations != null) {
+				for (Node target : locations) {
+					for (Node n : cuts) {
+						if (isChildNode(target, n)) {
+							prob += n.probability / n.numNouns;
+						}
 					}
 				}
 			}
@@ -271,7 +280,6 @@ public class WordnetModel extends Model {
 		}
 		
 	}
-
 	
 	private Set<Node> findMDL(Node start, String vb, String marker) {
 		if (start.children.length == 0) {
@@ -291,10 +299,10 @@ public class WordnetModel extends Model {
 			// Setting root to have probability temprorarily for ldash function
 			double startprob = start.probability;
 			for (Node n : this.getProbablilityClusters(start)) {
-				start.probability+= n.probability;
+				start.probability += n.probability;
 				//n.probability = 0;
 			}
-			if ((startprob !=0.0)&&(start.probability!=startprob)) {
+			if ((startprob != 0.0) && (start.probability != startprob)) {
 				//System.out.println("Somewhere folding didn't work");
 			}
 			
@@ -323,17 +331,15 @@ public class WordnetModel extends Model {
 		//System.err.println(counts.get(marker));
 		//System.err.println(probs.get(marker + "_g").get(generateKey(vb, "VB")));
 		//System.err.println(probs.get(marker + "_g").get(generateKey(vb, "VB")) * counts.get(marker));
-		double t1 = ((root.size() - 1) / 2.0) * Math.log(probs.get(marker + "_g").get(generateKey(vb, "VB")) * counts.get(marker))/Math.log(2);
+		double t1 = ((root.size() - 1) / 2.0) * Math.log(probs.get(marker + "_g").get(generateKey(vb, "VB")) * counts.get(marker)) / Math.log(2);
 		//double t1 = 0;
 		double t2 = 0;
 		for (Node n : root) {
-			if (n.probability!=0) {
-				t2 = t2 - n.probability*(probs.get(marker + "_g").get(generateKey(vb, "VB")) * counts.get(marker))
-						*Math.log(n.probability/n.numNodes)/Math.log(2);
+			if (n.probability != 0) {
+				t2 = t2 - n.probability * (probs.get(marker + "_g").get(generateKey(vb, "VB")) * counts.get(marker)) * Math.log(n.probability / n.numNodes) / Math.log(2);
 			}
 		}
 		//**//System.out.println("t2 =" + t2);
-		
 		
 		return t1 + t2;
 	}
@@ -352,7 +358,7 @@ public class WordnetModel extends Model {
 		}
 		return false;
 	}
-
+	
 	public WordnetModel(boolean requireSynchronized) throws InterruptedException {
 		super(requireSynchronized);
 		this.initilzieWordnet();
@@ -378,11 +384,12 @@ public class WordnetModel extends Model {
 	@Override
 	public Double getHighestProbabilityForBigram(String first, String firstPos, String second, String secondPos) {
 		try {
-			Double p1 = getGeneralization("direct object",first,second);
-			Double p2 = getGeneralization("direct object",second,first);
-			Double p3 = getGeneralization("nominal subject",first,second);
-			Double p4 = getGeneralization("nominal subject",second,first);
-			return Math.max(p1, Math.max(p2, Math.max(p3, p4)));
+			
+			Double p1 = getGeneralization("direct object", second, first);
+			//Double p2 = getGeneralization("direct object",second,first);
+			Double p3 = getGeneralization("nominal subject", second, first);
+			//Double p4 = getGeneralization("nominal subject",second,first);
+			return Math.max(p1, p3);
 		}
 		catch (InterruptedException e) {
 			// TODO Auto-generated catch block
@@ -397,10 +404,12 @@ public class WordnetModel extends Model {
 		squeue.add(root);
 		while (!squeue.isEmpty()) {
 			Node tmp = squeue.poll();
-			if (tmp.probability!=0) {
+			if (tmp.probability != 0) {
 				out.add(tmp);
 			}
-			for (Node n : tmp.children) {squeue.add(n);}
+			for (Node n : tmp.children) {
+				squeue.add(n);
+			}
 		}
 		return out;
 	}
