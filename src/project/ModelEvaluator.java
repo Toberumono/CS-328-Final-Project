@@ -11,6 +11,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.function.BiFunction;
+import java.util.regex.MatchResult;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -62,23 +63,22 @@ public class ModelEvaluator {
 	}
 	
 	public void ingestModel(Model model) {
-		Pattern keyDecomposer = Pattern.compile("(.*?) :: (.*?) ~ (.*?) :: (.*)");
-		Matcher parts;
+		Pattern keyDecomposer = Pattern.compile("(.+) :: (.+) ~ (.+) :: (.+)");
+		MatchResult parts;
 		for (String mapping : model.counts.keySet()) {
 			for (Entry<String, Double> e : model.probs.get(mapping).entrySet()) {
-				parts = keyDecomposer.matcher(e.getKey());
-				parts.find();
-				if (!parts.group(4).equals("NN"))
+				parts = model.splitKey(e.getKey());
+				if (!parts.group(6).equals("NN"))
 					continue;
-				if (parts.group(2).startsWith("JJ")) {
+				if (parts.group(3).startsWith("JJ")) {
 					if (!modelAN.containsKey(e.getKey()) || modelAN.get(e.getKey()) < e.getValue())
 						modelAN.put(e.getKey(), e.getValue());
 				}
-				else if (parts.group(2).equals("NN")) {
+				else if (parts.group(3).equals("NN")) {
 					if (!modelNN.containsKey(e.getKey()) || modelNN.get(e.getKey()) < e.getValue())
 						modelNN.put(e.getKey(), e.getValue());
 				}
-				else if (parts.group(2).startsWith("VB")) {
+				else if (parts.group(3).startsWith("VB")) {
 					if (!modelVN.containsKey(e.getKey()) || modelVN.get(e.getKey()) < e.getValue())
 						modelVN.put(e.getKey(), e.getValue());
 				}
@@ -89,7 +89,7 @@ public class ModelEvaluator {
 	public static void main(String[] args) throws IOException {
 		ModelEvaluator me = new ModelEvaluator();
 		me.digestTestData(Paths.get("./Keller_Lapata_2003_Plausibility_Data/items"), Paths.get("./Keller_Lapata_2003_Plausibility_Data/means"));
-		Model model = new RawCountsModel(Paths.get("/Users/joshualipstone/Downloads/LiModel"), false);
+		Model model = new RawCountsModel(Paths.get("/Users/joshualipstone/Downloads/Corpus"), false);
 		me.ingestModel(model);
 		double[][] xy;
 		PearsonsCorrelation cor;

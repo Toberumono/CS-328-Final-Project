@@ -4,11 +4,9 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.stream.Collectors;
 
 import toberumono.structures.collections.lists.SortedList;
@@ -16,8 +14,6 @@ import toberumono.structures.tuples.Pair;
 import toberumono.structures.tuples.Triple;
 
 public class LiModel extends Model {
-	//Pattern keyExtractor = Pattern.compile("(\\w+) :: (\\w+) ~ (\\w+) :: (\\w+)");
-	private boolean smoothed;
 	
 	public LiModel(boolean requireSynchronized) {
 		super(requireSynchronized);
@@ -192,37 +188,30 @@ public class LiModel extends Model {
 	}
 	
 	@Override
-	protected void smooth() { //We don't need to clear the probs map in this method because every value will be overwritten
-		convertToProbs();
-		if (smoothed)
-			return;
-		synchronized (this) {
-			if (smoothed)
-				return;
-			new MatrixIterator().forEachRemaining(entry -> {
-				List<List<String>> govs = entry.getY().getX();
-				List<List<String>> deps = entry.getY().getY();
-				int[][] counts = entry.getY().getZ();
-				performLDatSimplification(govs, deps, counts, govs.size(), deps.size(), 50);
-				System.out.println(govs.size() + ", " + deps.size());
-				for (int i = 0; i < deps.size(); i++) { //deps
-					for (int j = 0; j < govs.size(); j++) { //govs
-						double prob = counts[i][j] / (((double) deps.get(i).size()) * ((double) govs.get(j).size()));
-						Map<String, Double> map = probs.get(entry.getX());
-						for (String dep : deps.get(i))
-							for (String gov : govs.get(j))
-								if (prob > 0)
-									map.put(gov + " ~ " + dep, prob);
-					}
+	protected void doSmoothing() { //We don't need to clear the probs map in this method because every value will be overwritten
+		new MatrixIterator().forEachRemaining(entry -> {
+			List<List<String>> govs = entry.getY().getX();
+			List<List<String>> deps = entry.getY().getY();
+			int[][] counts = entry.getY().getZ();
+			performLDatSimplification(govs, deps, counts, govs.size(), deps.size(), 50);
+			System.out.println(govs.size() + ", " + deps.size());
+			for (int i = 0; i < deps.size(); i++) { //deps
+				for (int j = 0; j < govs.size(); j++) { //govs
+					double prob = counts[i][j] / (((double) deps.get(i).size()) * ((double) govs.get(j).size()));
+					Map<String, Double> map = probs.get(entry.getX());
+					for (String dep : deps.get(i))
+						for (String gov : govs.get(j))
+							if (prob > 0)
+								map.put(gov + " ~ " + dep, prob);
 				}
-				System.out.println("Processed: " + entry.getX());
-			});
-			smoothed = true;
-		}
+			}
+			System.out.println("Processed: " + entry.getX());
+		});
 	}
 	
 	public static void main(String[] args) throws IOException {
 		LiModel model = new LiModel(Paths.get(args[0]), false);
+		model.convertToProbs();
 		model.smooth();
 		model.storeModel(Paths.get(args[1]));
 	}

@@ -16,7 +16,12 @@ public class RawCountsModel extends Model {
 	}
 
 	@Override
-	protected void smooth() {
+	protected void doSmoothing() {
+		
+	}
+
+	@Override
+	public void smooth() {
 		
 	}
 

@@ -57,18 +57,18 @@ public abstract class Model {
 	private final boolean requireSynchronized;
 	protected final Map<String, Map<String, Double>> probs;
 	protected Map<String, Integer> counts;
-	private boolean converted;
+	private boolean converted, smoothed;
 	
 	public Model(boolean requireSynchronized) {
 		this.requireSynchronized = requireSynchronized;
 		probs = this.requireSynchronized ? Collections.synchronizedMap(new HashMap<>()) : new HashMap<>();
 		counts = null;
 		converted = false;
+		smoothed = false;
 	}
 	
 	public Model(Path root, boolean requireSynchronized) throws IOException {
 		this(requireSynchronized);
-		converted = true;
 		SimpleFileVisitor<Path> visitor = new SimpleFileVisitor<Path>() {
 			@Override
 			public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
@@ -81,6 +81,9 @@ public abstract class Model {
 						counts.put(line.substring(0, equals).trim(), Integer.parseInt(line.substring(equals + 1).trim()));
 					});
 				}
+				else if (name.equals("STORED_STATE")) {
+					Files.lines(file).forEach(Model.this::parseStateLine);
+				}
 				else {
 					probs.put(name, new HashMap<>());
 					Files.lines(file).forEach(line -> {
@@ -92,6 +95,18 @@ public abstract class Model {
 			}
 		};
 		Files.walkFileTree(root, visitor);
+	}
+	
+	protected void parseStateLine(String line) {
+		String[] parts = line.split(" = ");
+		switch (parts[0].trim()) {
+			case "converted":
+				converted = Boolean.parseBoolean(parts[1].trim());
+				return;
+			case "smoothed":
+				smoothed = Boolean.parseBoolean(parts[1].trim());
+				return;
+		}
 	}
 	
 	public void convertToProbs() {
@@ -109,7 +124,18 @@ public abstract class Model {
 		}
 	}
 	
-	protected abstract void smooth();
+	protected void smooth() {
+		if (smoothed)
+			return;
+		synchronized (probs) {
+			if (smoothed)
+				return;
+			doSmoothing();
+			smoothed = true;
+		}
+	}
+	
+	protected abstract void doSmoothing();
 	
 	private void initCounts() {
 		if (counts == null) {
@@ -194,8 +220,20 @@ public abstract class Model {
 		return highest;
 	}
 	
+	public boolean containsBigram(TypedDependency td) {
+		if (!shouldRecord(td))
+			return false;
+		stem(td);
+		String name = td.reln().getLongName();
+		if (!probs.containsKey(name))
+			return false;
+		return probs.get(name).containsKey(generateKey(td));
+	}
+	
 	public Double probabilityForBigram(TypedDependency td) {
 		convertToProbs();
+		if (!shouldRecord(td))
+			return 0.0;
 		stem(td);
 		String name = td.reln().getLongName();
 		if (!probs.containsKey(name))
@@ -205,12 +243,18 @@ public abstract class Model {
 	}
 	
 	public Integer countForBigram(TypedDependency td) {
+		if (!shouldRecord(td))
+			return 0;
 		stem(td);
 		String name = td.reln().getLongName();
 		if (!probs.containsKey(name))
 			return 0;
 		String gov = generateKey(td.gov()), dep = generateKey(td.dep()), key = gov + " ~ " + dep;
 		return probs.get(name).containsKey(key) ? (int) (converted ? probs.get(name).get(key) * counts.get(name) : probs.get(name).get(key)) : 0;
+	}
+	
+	public String generateKey(TypedDependency td) {
+		return generateKey(td.gov()) + " ~ " + generateKey(td.dep());
 	}
 	
 	public String generateKey(IndexedWord iw) {
@@ -235,6 +279,13 @@ public abstract class Model {
 		Matcher m = keySplitter.matcher(key);
 		m.find();
 		return m.toMatchResult();
+	}
+	
+	protected void storeState(BufferedWriter bw) throws IOException {
+		bw.write("converted = " + converted);
+		bw.newLine();
+		bw.write("smoothed = " + smoothed);
+		bw.newLine();
 	}
 	
 	public void storeModel(Path root) throws IOException {
@@ -270,6 +321,11 @@ public abstract class Model {
 					e.printStackTrace();
 				}
 			});
+		}active = root.resolve("STORED_STATE");
+		Files.deleteIfExists(active);
+		Files.createFile(active);
+		try (FileWriter fw = new FileWriter(active.toFile()); BufferedWriter bw = new BufferedWriter(fw)) {
+			storeState(bw);
 		}
 	}
 }
