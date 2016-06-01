@@ -4,20 +4,17 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.Objects;
 import java.util.Queue;
 import java.util.Set;
 import java.util.concurrent.LinkedBlockingQueue;
 
 import toberumono.structures.tuples.Pair;
-import toberumono.structures.tuples.Triple;
 
 import edu.smu.tspell.wordnet.NounSynset;
 import edu.smu.tspell.wordnet.Synset;
@@ -77,7 +74,7 @@ public class WordnetModel extends Model {
 			
 			WordnetModel m = new WordnetModel(Paths.get("/Users/jamie/Documents/College/Junior Year/Computational Cognition/CS328Final/BNC Digested/Corpus.medium"), false);
 			System.out.println("develop: " + m.getGeneralization("direct object", "economy", "develop"));
-			System.out.println("eat: " + m.getGeneralization("direct object", "chicken", "eat"));
+			System.out.println("eat: " + m.getGeneralization("direct object", "food", "eat"));
 			System.out.println("eat: " + m.getGeneralization("direct object", "economy", "eat"));
 			System.out.println("justify: " + m.getGeneralization("nominal subject", "means", "justify"));
 			System.out.println("justify: " + m.getGeneralization("nominal subject", "ends", "justify"));
@@ -95,7 +92,7 @@ public class WordnetModel extends Model {
 	public void initilzieWordnet() throws InterruptedException {
 		wordnetNounTree = new Node(wordnetDB.getSynsets("entity", SynsetType.NOUN)[0]);
 		NounTreeMap = new HashMap<>();
-		List<Node> root = new LinkedList<Node>();
+		List<Node> root = new LinkedList<>();
 		root.add(wordnetNounTree);
 		NounTreeMap.put(wordnetNounTree.synset.getDefinition(), root);
 		Queue<Node> nqueue = new LinkedBlockingQueue<>();
@@ -114,7 +111,7 @@ public class WordnetModel extends Model {
 					NounTreeMap.get(tmp).add(current.children[i]);
 				}
 				else {
-					List<Node> newList = new LinkedList<Node>();
+					List<Node> newList = new LinkedList<>();
 					newList.add(current.children[i]);
 					NounTreeMap.put(tmp, newList);
 				}
@@ -154,12 +151,12 @@ public class WordnetModel extends Model {
 		String gov = generateKey(vb, "VB");
 		for (Entry<String, Double> e : probs.get(marker).entrySet()) {
 			if (e.getKey().startsWith(gov)) {
-				//System.out.println(e.getKey());
-				//System.out.print("  " + splitKey(e.getKey()).group(5));
+				//**//System.out.println(e.getKey());
+				//**//System.out.print("  " + splitKey(e.getKey()).group(5));
 				Synset[] synsets = wordnetDB.getSynsets(splitKey(e.getKey()).group(5), SynsetType.NOUN);
 				boolean words = false; 
 				for (Synset s : synsets) {
-					if (NounTreeMap.get(synsets[0].getDefinition())!=null) {
+					if (NounTreeMap.get(s.getDefinition())!=null) {
 						words = true;
 					}
 				}
@@ -170,13 +167,13 @@ public class WordnetModel extends Model {
 				
 			}
 		}
-		System.out.println("sum equals: " + sum);
+		//System.out.println("sum equals: " + sum);
 		Double totalprob = 0.0;
 		
 		// Mapping those counts to the tree
 		List<Node> visited = new LinkedList<>();
 		for (Pair<String, Double> ID : usedIDs) {
-			//System.out.println(ID.getX());
+			//**//System.out.println(ID.getX());
 			Double prob = ID.getY() / sum;
 			Synset[] synsets = wordnetDB.getSynsets(ID.getX().substring(0, ID.getX().indexOf(" :: ")), SynsetType.NOUN);
 			int totalinstances = 0;
@@ -185,7 +182,7 @@ public class WordnetModel extends Model {
 				if (tmp!=null) {
 					totalinstances = totalinstances + tmp.size();
 				} else {
-					System.out.println(ID.getX());
+					//System.out.println(ID.getX());
 				}
 				
 			}
@@ -203,9 +200,9 @@ public class WordnetModel extends Model {
 			}
 			
 		}
-		System.out.println("total probablity added =" + totalprob);
+		//System.out.println("total probablity added =" + totalprob);
 		Set<Node> populated = getProbablilityClusters(wordnetNounTree);
-		System.out.println("Before collapseing there are " + populated.size() + " nodes in the tree");
+		//System.out.println("Before collapseing there are " + populated.size() + " nodes in the tree");
 		// Collapsing probabilites into parents
 		for (Node n : visited) {
 			Node current = n;
@@ -221,33 +218,36 @@ public class WordnetModel extends Model {
 			}
 		}
 		populated = getProbablilityClusters(wordnetNounTree);
-		System.out.println("After collapsing there are " + populated.size() + " nodes in the tree");
+		//System.out.println("After collapsing there are " + populated.size() + " nodes in the tree");
 		
 		Set<Node> cuts = findMDL(wordnetNounTree, vb, marker);
-		System.out.println("the size of the cuts " + cuts.size());
-		System.out.println(cuts.contains(wordnetNounTree));
-		System.out.println("^was " + vb + "\n\n");
+		//System.out.println("the size of the cuts " + cuts.size());
+		//System.out.println(cuts.contains(wordnetNounTree));
+		//System.out.println("^was " + vb + "\n\n");
 		//System.err.println(cuts.iterator().next().probability);
 		
 		populated = getProbablilityClusters(wordnetNounTree);
-		System.out.println("There are " + populated.size() + " nodes in the tree");
+		//System.out.println("There are " + populated.size() + " nodes in the tree");
 		
-		
+		cuts.addAll(populated);
 		for (Node n : cuts) {
-			System.out.println(n.probability + "  =" + n.synset.getDefinition());
+			//System.out.println(n.probability + "  =" + n.synset.getDefinition());
 		}
 		
-		
+		//Node highest;
+		double prob = 0;
 		for (Node n : cuts) {
 			if (isChildNoun(nn, (NounSynset) n.synset)) {
-				return n.probability / n.numNouns;
+				prob+= n.probability / n.numNouns;
 			}
 		}
-		System.err.println("The word was not found");
-		System.err.println("the size of the array " + cuts.size());
-		System.err.println(cuts.contains(wordnetNounTree));
-		System.err.println(cuts.iterator().next().probability);
-		return 0.0;
+		return prob;
+		
+		//System.err.println("The word was not found");
+		//System.err.println("the size of the array " + cuts.size());
+		//System.err.println(cuts.contains(wordnetNounTree));
+		//System.err.println(cuts.iterator().next().probability);
+		//return 0.0;
 	}
 	
 	private void resetProbablities(Node n) throws InterruptedException {
@@ -262,42 +262,7 @@ public class WordnetModel extends Model {
 		}
 		
 	}
-	
-	/*
-	for (String mapping : counts.keySet()) {
-		
-	}
-	
-	
-	
-	//Map<String, Triple<List<Set<String>>, List<Set<String>>, int[][]>> out = new HashMap<>();
-	for (String mapping : counts.keySet()) {
-		/*List<Set<String>> govSet = probs.get(mapping + "_g").keySet().stream().map(s -> {
-			Set<String> set = new HashSet<>();
-			set.add(s);
-			return set;
-		}).collect(Collectors.toList());
-		List<Set<String>> depSet = probs.get(mapping + "_d").keySet().stream().map(s -> {
-			Set<String> set = new HashSet<>();
-			set.add(s);
-			return set;
-		}).collect(Collectors.toList());
-		Map<String, Double> pairs = probs.get(mapping);
-		int totalCount = counts.get(mapping);
-		
-		
-		int[][] counts = new int[govSet.size()][depSet.size()];
-		String key;
-		for (int i = 0; i < govSet.size(); i++) {
-			for (int j = 0; j < depSet.size(); j++) {
-				key = govSet.get(i) + " ~ " + depSet.get(j);
-				counts[i][j] = (int) (pairs.containsKey(key) ? pairs.get(key) * totalCount : 0);
-			}
-		}
-		out.put(mapping, new Triple<>(govSet, depSet, counts)); //x, y, z
-	}
-	return out;
-	}*/
+
 	
 	private Set<Node> findMDL(Node start, String vb, String marker) {
 		if (start.children.length == 0) {
@@ -310,23 +275,30 @@ public class WordnetModel extends Model {
 			root.add(start);
 			Set<Node> c = new HashSet<>();
 			for (Node ci : start.children) {
-				c.addAll(findMDL(ci, vb, marker));
+				for (Node cii : findMDL(ci, vb, marker)) {
+					c.add(cii);
+				}
 			}
 			// Setting root to have probability temprorarily for ldash function
 			double startprob = start.probability;
-			for (Node ci : c) {
-				start.probability += ci.probability;
+			for (Node n : this.getProbablilityClusters(start)) {
+				start.probability+= n.probability;
+				//n.probability = 0;
 			}
-			if ((startprob !=0.0)&&(start.probability==startprob)) {
-				System.out.println("Somewhere folding didn't work");
+			if ((startprob !=0.0)&&(start.probability!=startprob)) {
+				//System.out.println("Somewhere folding didn't work");
 			}
 			
-			//System.out.println("This cluster probability =" + start.probability);
-			//System.out.println("num clusters below = " + start.numNodes);
-			//System.out.println("ldash root =" + ldash(root,vb,marker) + "   ldash children =" + ldash(c, vb, marker));
+			//**//System.out.println("This cluster probability =" + start.probability);
+			//**//System.out.println("num clusters below = " + start.numNodes);
+			//**//System.out.println("ldash root =" + ldash(root,vb,marker) + "   ldash children =" + ldash(c, vb, marker));
 			if (ldash(root, vb, marker) < ldash(c, vb, marker)) {
 				// Assigning the probability of the subpartition.
-				for (Node n : c) {n.probability =0;}
+				//for (Node n : c) {n.probability =0;}
+				for (Node n : this.getProbablilityClusters(start)) {
+					//start.probability+= n.probability;
+					n.probability = 0;
+				}
 				return root;
 			}
 			else {
@@ -339,6 +311,8 @@ public class WordnetModel extends Model {
 	// TODO stub method, figure out the math
 	private double ldash(Set<Node> root, String vb, String marker) {
 		// TODO deal with the null pointer on unseen thing
+		//System.err.println(counts.get(marker));
+		//System.err.println(probs.get(marker + "_g").get(generateKey(vb, "VB")));
 		//System.err.println(probs.get(marker + "_g").get(generateKey(vb, "VB")) * counts.get(marker));
 		double t1 = ((root.size() - 1) / 2.0) * Math.log(probs.get(marker + "_g").get(generateKey(vb, "VB")) * counts.get(marker))/Math.log(2);
 		//double t1 = 0;
@@ -349,13 +323,13 @@ public class WordnetModel extends Model {
 						*Math.log(n.probability/n.numNodes)/Math.log(2);
 			}
 		}
-		//System.out.println("t2 =" + t2);
+		//**//System.out.println("t2 =" + t2);
 		
 		
 		return t1 + t2;
 	}
 	
-	public boolean isChildNoun(String noun, NounSynset root) throws InterruptedException {
+	private boolean isChildNoun(String noun, NounSynset root) throws InterruptedException {
 		Queue<NounSynset> squeue = new LinkedBlockingQueue<>();
 		squeue.add(root);
 		while (!squeue.isEmpty()) {
@@ -371,40 +345,7 @@ public class WordnetModel extends Model {
 		}
 		return false;
 	}
-	
-	// first = number of nodes below this one
-	public Pair<Integer, Integer> evaluateNode(Pair<Pair<NounSynset, NounSynset>, Double> input) throws InterruptedException {
-		Queue<NounSynset> squeue = new LinkedBlockingQueue<>();
-		int totalNodes = 0;
-		squeue.add(input.getX().getY());
-		while (!squeue.isEmpty()) {
-			NounSynset temp = squeue.remove();
-			totalNodes++;
-			for (NounSynset s : temp.getHyponyms()) {
-				squeue.add(s);
-			}
-		}
-		return null;
-	}
-	
-	/*
-	public static Set<Synset> findRootNoun(NounSynset start) throws InterruptedException {
-		Queue<NounSynset> squeue = new Queue<>();
-		Set<Synset> out = new HashSet<>();
-		squeue.add(start);
-		while (!squeue.isEmpty()) {
-			NounSynset tmp = squeue.remove();
-			NounSynset[] hyp = tmp.getHypernyms();
-			if (hyp.length ==0) {
-				out.add(tmp);
-			} else {
-				for (NounSynset s : hyp) {squeue.add(s);}
-			}
-		}
-		return out;
-		
-	}
-	*/
+
 	public WordnetModel(boolean requireSynchronized) throws InterruptedException {
 		super(requireSynchronized);
 		this.initilzieWordnet();
@@ -416,7 +357,7 @@ public class WordnetModel extends Model {
 	}
 	
 	@Override
-	protected void smooth() {
+	protected void doSmoothing() {
 		// TODO Auto-generated method stub
 		
 	}
