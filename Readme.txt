@@ -5,7 +5,8 @@ I. Building the Project
 		c. SLF4J (the -api and -simple .jars)
 		d. JAWS
 		e. Stanford's CoreNLP library (Extract the .zip from their big download link)
-	2. Run ant
+	2. Run: ant
+
 II. Running the Project
 	1. Preparation
 		a. Install WordNet (these instructions will assume that you have installed WordNet 3.1 through Homebrew)
@@ -23,4 +24,16 @@ II. Running the Project
 	4. Running the SentenceEvaluator
 		a. Make sure that you have built the PMI Model
 		b. Run: java -Dwordnet.database.dir="/usr/local/Cellar/wordnet/3.1/dict" -cp SelectionalPreference.jar project.SentenceEvaluator "<path to the PMIModel root directory>"
-		 
+	5. Running the ModelEvaluator
+		a. Generate the model that you are interested by following the previous instructions
+		b. Edit line 92 of ModelEvaluator such that it constructs a model of the correct type
+		c. Run: ant
+		d. Run: java -Dwordnet.database.dir="/usr/local/Cellar/wordnet/3.1/dict" -cp SelectionalPreference.jar project.ModelEvaluator "<path to the Model root directory>"
+
+III. Files of Interest
+	1. projects.Model
+	2. projects.PMIModel
+	3. projects.LiModel
+	4. projects.WordnetModel
+	5. projects.SentenceEvaluator
+	6. projects.ModelEvaluator
