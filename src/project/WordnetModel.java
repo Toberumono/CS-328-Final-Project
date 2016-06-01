@@ -89,7 +89,7 @@ public class WordnetModel extends Model {
 		}
 	}
 	
-	public void initilzieWordnet() throws InterruptedException {
+	public void initilzieWordnet() {
 		wordnetNounTree = new Node(wordnetDB.getSynsets("entity", SynsetType.NOUN)[0]);
 		NounTreeMap = new HashMap<>();
 		List<Node> root = new LinkedList<>();
@@ -138,14 +138,14 @@ public class WordnetModel extends Model {
 	}
 	
 	// For right now this is only for verbs, will generalize later
-	public double getGeneralization(String marker, String nn, String vb) throws InterruptedException {
+	public double getGeneralization(String marker, String nn, String vb) {
 		//System.out.println(vb);
 		//System.out.println(probs.get(marker + "_g").get(generateKey(vb, "VB")));
 		
 		//System.out.println(x);
 		//System.out.println(probs.get(marker + "_g").get(generateKey(vb, "VB")));
 		
-		if (probs.get(marker + "_g").get(generateKey(vb, "VB"))==null) {
+		if (probs.get(marker + "_g").get(generateKey(vb, "VB")) == null) {
 			return 0.0;
 		}
 		convertToProbs();
@@ -268,7 +268,7 @@ public class WordnetModel extends Model {
 		//return 0.0;
 	}
 	
-	private void resetProbablities(Node n) throws InterruptedException {
+	private void resetProbablities(Node n) {
 		Queue<Node> squeue = new LinkedBlockingQueue<>();
 		squeue.add(n);
 		while (!squeue.isEmpty()) {
@@ -344,7 +344,7 @@ public class WordnetModel extends Model {
 		return t1 + t2;
 	}
 	
-	private boolean isChildNode(Node target, Node scope) throws InterruptedException {
+	private boolean isChildNode(Node target, Node scope) {
 		Queue<Node> squeue = new LinkedBlockingQueue<>();
 		squeue.add(scope);
 		while (!squeue.isEmpty()) {
@@ -359,43 +359,26 @@ public class WordnetModel extends Model {
 		return false;
 	}
 	
-	public WordnetModel(boolean requireSynchronized) throws InterruptedException {
+	public WordnetModel(boolean requireSynchronized) {
 		super(requireSynchronized);
 		this.initilzieWordnet();
 	}
 	
-	public WordnetModel(Path root, boolean requireSynchronized) throws IOException, InterruptedException {
+	public WordnetModel(Path root, boolean requireSynchronized) throws IOException {
 		super(root, requireSynchronized);
 		this.initilzieWordnet();
 	}
 	
 	@Override
-	protected void doSmoothing() {
-		// TODO Auto-generated method stub
-		
-	}
-	
-	@Override
-	public Double probabilityForBigram(TypedDependency td) {
-		// TODO Auto-generated method stub
-		return null;
-	}
+	protected void doSmoothing() {/* Not used */}
 	
 	@Override
 	public Double getHighestProbabilityForBigram(String first, String firstPos, String second, String secondPos) {
-		try {
-			
-			Double p1 = getGeneralization("direct object", second, first);
-			//Double p2 = getGeneralization("direct object",second,first);
-			Double p3 = getGeneralization("nominal subject", second, first);
-			//Double p4 = getGeneralization("nominal subject",second,first);
-			return Math.max(p1, p3);
-		}
-		catch (InterruptedException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-		return 0.0;
+		Double p1 = getGeneralization("direct object", second, first);
+		//Double p2 = getGeneralization("direct object",second,first);
+		Double p3 = getGeneralization("nominal subject", second, first);
+		//Double p4 = getGeneralization("nominal subject",second,first);
+		return Math.max(p1, p3);
 	}
 	
 	private Set<Node> getProbablilityClusters(Node root) {
