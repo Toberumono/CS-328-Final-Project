@@ -230,16 +230,25 @@ public class WordnetModel extends Model {
 		//System.out.println("There are " + populated.size() + " nodes in the tree");
 		
 		cuts.addAll(populated);
-		for (Node n : cuts) {
+		//for (Node n : cuts) {
 			//System.out.println(n.probability + "  =" + n.synset.getDefinition());
-		}
+		//}
 		
-		//Node highest;
-		double prob = 0;
-		for (Node n : cuts) {
-			if (isChildNoun(nn, (NounSynset) n.synset)) {
-				prob+= n.probability / n.numNouns;
+		// Finds all locations in the tree the given noun appears, then checks the the cut set for every 
+		// synset that the target noun appears and adds the probability of that synset to the total 
+		// probability
+		double prob = 0.0;
+		
+		for (Synset s : wordnetDB.getSynsets(nn, SynsetType.NOUN)) {
+			List<Node> locations = NounTreeMap.get(s.getDefinition());
+			for (Node target : locations) {
+				for (Node n : cuts) {
+					if (isChildNode(target, n)) {
+						prob+= n.probability / n.numNouns;
+					}
+				}
 			}
+			
 		}
 		return prob;
 		
@@ -329,18 +338,16 @@ public class WordnetModel extends Model {
 		return t1 + t2;
 	}
 	
-	private boolean isChildNoun(String noun, NounSynset root) throws InterruptedException {
-		Queue<NounSynset> squeue = new LinkedBlockingQueue<>();
-		squeue.add(root);
+	private boolean isChildNode(Node target, Node scope) throws InterruptedException {
+		Queue<Node> squeue = new LinkedBlockingQueue<>();
+		squeue.add(scope);
 		while (!squeue.isEmpty()) {
-			NounSynset temp = squeue.remove();
-			for(String s : temp.getWordForms()) {
-				if (noun.contains(s)) {
-					return true;
-				}
+			Node temp = squeue.remove();
+			if (target.equals(temp)) {
+				return true;
 			}
-			for (NounSynset subsynset : temp.getHyponyms()) {
-				squeue.add(subsynset);
+			for (Node child : temp.children) {
+				squeue.add(child);
 			}
 		}
 		return false;
